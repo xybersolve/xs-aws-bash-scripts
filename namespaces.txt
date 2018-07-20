@@ -1,0 +1,17 @@
+Namespaces: enable segregation for metric aggregation
+Metrics: are the individual measurements:
+  eg: check a metrics for a given resource
+  Route53:
+    ConnectionTime
+    HealthCheckPercentageHealthy
+    HealthCheckStatus
+
+Dimensions: A slice of resources by category (dimension)
+  Eg: select dimension to view resources by
+  EC2:
+    AutoScalingGroup
+    ImageId
+    InstanceId
+    InstanceType
+
+Metrics only held for 2 weeks - must export to S3

@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Manage AWS Monitoring
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.1.1
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2018 http://xybersolve.io
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose:
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+      --on[=<Name Tag Like>]: turn on monitoring
+      --off[=<Name Tag Like>]: turn off monitoring
+      --all: do it for all instances
+      --run[ning]: do it for all running instances
+
+    Examples:
+      ${PROGNAME} --on='*web*'
+      ${PROGNAME} --on --all
+      ${PROGNAME} --on --run[ning]
+      ${PROGNAME} --off='*staging*'
+      ${PROGNAME} --off --run[ning]
+
+      ${PROGNAME} --show-alarms=*name*
+
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r LIB_FILE="${SCRIPT_DIR}/ec2.sh"
+
+# actions
+declare -i ON=${FALSE}
+declare -i OFF=${FALSE}
+declare -i SHOW_ALARMS=${FALSE}
+
+
+# flags
+declare -i DRYRUN=${FALSE}
+declare -i ALL=${FALSE}
+declare -i RUNNING=${FALSE}
+
+# script globals
+declare -a IDS=()
+declare INSTANCE_NAME=''
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+source "${LIB_FILE}" \
+  || die "Unable to open lib file: ${LIB_FILE}" 1
+
+__get_ids() {
+  (( ALL )) \
+    && IDS=($( __get_all_instance_ids ))
+
+  (( RUNNING )) \
+    && IDS=($( __get_running_instance_ids ))
+
+  [[ -n ${INSTANCE_NAME} ]] \
+    && IDS=($( __get_instance_id_by_name "${INSTANCE_NAME}" ))
+
+  echo "${IDS[@]}"
+}
+
+__get_dry_run() {
+  (( DRYRUN )) && echo 'echo' || echo ''
+}
+
+__on() {
+  local dryrun=$(__get_dry_run)
+  __get_ids
+  aws ec2 monitor-instances --instance-ids "${IDS[@]}"
+}
+
+__off() {
+  local dryrun=$(__get_dry_run)
+  __get_ids
+  aws ec2 unmonitor-instances --instance-ids "${IDS[@]}"
+}
+
+__show_metrics() {
+  --namespace --dimension
+}
+
+__show_alarms() {
+  aws cloudwatch describe-alarms
+}
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --dryrun|--dry-run) DRYRUN=${TRUE}  ;;
+        --on*)
+        ON=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+      --off*)
+        OFF=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+      --all) ALL=${TRUE} ;;
+      --run*) RUNNING=${TRUE} ;;
+      --show-alarms*)
+        SHOW_ALARMS=${TRUE}
+        [[ ${arg} =~ '=' ]] && ALARM_NAME="${arg#*=}"
+        ;;
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( ON )) && __on
+  (( OFF )) && __off
+  (( SHOW_ALARMS )) && __show_alarms
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main

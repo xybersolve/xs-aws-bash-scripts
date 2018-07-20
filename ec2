@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Wrapper to ec2.sh script library
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.0.4
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2017 http://www.xybersolve.com
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose: Wrapper to ec2.sh library rouines
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+      --get-image-id[=os name]
+      --get-vpc-id[=vpc name]
+      --get-sg-id[=security group name]
+      --get-pub-sub-id[=vpc name]
+      --get-inst-id-by-name=<instance name>
+      --get-inst-by-id=<id>
+      --get-inst-all-regions
+      --start-inst=<instance name>: Start an instance by name
+      --stop-inst=<instance name>: Stop an instance by name
+      --terminate-inst=<instance name>: Terminate instance by name
+      --change-inst-type=<instance name>: change type of instance
+
+    Examples:
+      --start-inst=xybersolve-prod-web*
+      --stop-inst=xybersolve-prod-web*
+      --terminate-inst=xybersolve-prod-web1
+      --change-inst-type=xybersolve-prod-web2 --type=t2.micro
+      --change-inst-type=xybersolve-prod-web2 --type=t2.medium
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r LIB_FILE="${SCRIPT_DIR}/ec2.sh"
+
+# actions
+declare -i GET_VPC_ID=${FALSE}
+declare -i GET_PUBLIC_SUBNET_ID=${FALSE}
+declare -i GET_SECURITY_GROUP_ID=${FALSE}
+declare -i GET_IMAGE_ID=${FALSE}
+declare -i GET_INST_ID_BY_NAME=${FALSE}
+declare -i GET_INST_BY_ID=${FALSE}
+declare -i GET_RUNNING_INST_IDS=${FALSE}
+declare -i START_INSTANCE=${FALSE}
+declare -i STOP_INSTANCE=${FALSE}
+declare -i TERMINATE_INSTANCE=${FALSE}
+declare -i CHANGE_INSTANCE_TYPE=${FALSE}
+
+# script globals
+declare INSTANCE_NAME
+declare INSTANCE_ID
+declare INSTANCE_TYPE='t2.micro'
+
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+source "${LIB_FILE}" \
+  || die "Unable to open lib file: ${LIB_FILE}" 1
+
+__choose_instance() {
+  :
+}
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --get-vpc-id*)
+        GET_VPC_ID=${TRUE}
+        [[ ${arg} =~ '=' ]] && VPC_NAME="${arg#*=}"
+        ;;
+      --get-pub-sub-id*)
+        GET_PUBLIC_SUBNET_ID=${TRUE}
+        [[ ${arg} =~ '=' ]] && VPC_NAME="${arg#*=}"
+        ;;
+      --get-sg-id*)
+        GET_SECURITY_GROUP_ID=${TRUE}
+        [[ ${arg} =~ '=' ]] && SECURITY_GROUP_NAME="${arg#*=}"
+        ;;
+      --get-image-id*)
+        GET_IMAGE_ID=${TRUE}
+        [[ ${arg} =~ '=' ]] && IMAGE_OS="${arg#*=}"
+        ;;
+      --get-inst-id-by-name*)
+        GET_INST_ID_BY_NAME=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        #echo "INSTANCE_NAME: ${INSTANCE_NAME}"
+        ;;
+      --get-inst-by-id*)
+        GET_INST_BY_ID=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_ID="${arg#*=}"
+        #echo "INSTANCE_ID: ${INSTANCE_ID}"
+        ;;
+      --get-running-inst-ids)
+        GET_RUNNING_INST_IDS=${TRUE} ;;
+      ## Debug Routines
+      --get-region-names)
+        __get_region_names ;;
+
+      --get-inst-all-region*)
+        __get_instances_all_regions ;;
+
+      --get-rds-all-region*)
+        __get_rds_all_regions ;;
+
+      --stop-inst*)
+        STOP_INSTANCE=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+      --start-inst*)
+        START_INSTANCE=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+      --terminate-inst*)
+        TERMINATE_INSTANCE=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+
+      --change-inst-type*)
+        CHANGE_INSTANCE_TYPE=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        #echo "INSTANCE_ID: ${INSTANCE_ID}"
+        ;;
+      --type*)
+        [[ ${arg} =~ '=' ]] && INSTANCE_TYPE="${arg#*=}"
+        #echo "INSTANCE_ID: ${INSTANCE_ID}"
+        ;;
+
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  # dispatch enables all variable assignment before any calls are made
+  # mostly calls to ec2-sh with argument
+  (( GET_VPC_ID )) && __get_vpc_id
+  (( GET_IMAGE_ID )) && __get_image_id
+  (( GET_PUBLIC_SUBNET_ID )) && __get_public_subnet_id
+  (( GET_SECURITY_GROUP_ID )) && __get_security_group_id
+  (( GET_INST_ID_BY_NAME )) && __get_instance_id_by_name "${INSTANCE_NAME}"
+  (( GET_INST_BY_ID )) && __get_instance_by_id "${INSTANCE_ID}"
+  (( GET_RUNNING_INST_IDS )) && __get_running_instance_ids
+  #
+  (( START_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
+  (( STOP_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
+  (( TERMINATE_INSTANCE )) && __terminate_instance "${INSTANCE_NAME}"
+
+  (( CHANGE_INSTANCE_TYPE )) && __change_instance_type "${INSTANCE_NAME}" "${INSTANCE_TYPE}"
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main

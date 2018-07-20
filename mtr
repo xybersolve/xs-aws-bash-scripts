@@ -1,0 +1,434 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Manage Metrics
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.1.1
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2018 http://xybersolve.io
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose:
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+      --list=<namespace>
+      --list-all: list metrics, dimensions by namespace for all available
+      --list-by[=<namespace>]: displays menu when no namespace argument
+      --list-namespaces: show namespaces
+
+    Examples:
+      --list-by
+      --list-by=AWS/EC2
+      --list-from=AWS/S3
+      --list-all
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+
+# actions
+declare -i LIST_METRICS=${FALSE}
+declare -i LIST_ALL=${FALSE}
+declare -i LIST_BY=${FALSE}
+declare -i LIST_FROM=${FALSE}
+declare -i LIST_NAMESPACES=${FALSE}
+
+# script globals
+declare NAMESPACE=''
+declare METRIC_NAME=''
+declare -A METRIC_NAMES=(
+  ['null']='whatever'
+)
+declare -x _xsRESET='\e[0m'
+declare -x _xsDEFAULT='\e[39m'
+declare -x _xsRED='\e[31m'
+declare -x _xsGREEN='\e[32m'
+declare -x _xsYELLOW='\e[33m'
+declare -x _xsLIGHTGRAY='\e[37m'
+declare -x _xsDARKGRAY='\e[90m'
+declare -x _xsLIGHTRED='\e[91m'
+declare -x _xsLIGHTGREEN='\e[92m'
+declare -x _xsLIGHTYELLOW='\e[93m'
+declare -x _xsLIGHTBLUE='\e[94m'
+declare -x _xsLIGHTMAGENTA='\e[95m'
+declare -x _xsLIGHTCYAN='\e[96m'
+declare -x _xsWHITE='\e[97m'
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+source "${SCRIPT_DIR}/namespaces.sh" \
+  || die "Unable to load namespaces.sh" 1
+
+__exists() {
+  if [ "$2" != in ]; then
+    echo "Incorrect usage."
+    echo "Correct usage: exists {key} in {array}"
+    return
+  fi
+  eval '[ ${'$3'[$1]+muahaha} ]'
+}
+
+# __checkIfExist array key2
+__checkIfExist() {
+    eval 'local keys=${!'$1'[@]}';
+    eval "case '$2' in
+        ${keys// /|}) return 0 ;;
+        * ) return 1 ;;
+      esac";
+}
+
+
+__get_statistics() {
+  # Swarm - mgr1
+  local id='i-061c199944d0af5a8'
+
+  aws cloudwatch get-metric-statistics \
+    --namespace AWS/EC2 \
+    --metric-name CPUUtilization \
+    --period 3600 \
+    --statistics Maximum \
+    --dimensions "Name=InstanceId,Value=${id}" \
+    --start-time 2018-06-18T12:01:01 \
+    --end-time 2018-06-22T12:01:01
+}
+
+__get_statistics2() {
+  # Swarm - mgr1 image id
+  local id='ami-221f5c5a'
+
+  aws cloudwatch get-metric-statistics \
+    --namespace AWS/EC2 \
+    --metric-name CPUUtilization \
+    --period 3600 \
+    --statistics Maximum \
+    --dimensions "Name=ImageId,Value=${id}" \
+    --start-time 2018-06-18T12:01:01 \
+    --end-time 2018-06-22T12:01:01
+}
+
+
+# list-namespace
+# --namespace (string)
+#    The namespace to filter against.
+# --metric-name (string)
+#    The name of the metric to filter against.
+# --dimensions (list)
+#    The dimensions to filter against.
+
+__choose_metric_name() {
+  local query="Metrics[*].MetricName"
+
+  metric_names=($(aws cloudwatch list-metrics \
+     --namespace "${NAMESPACE}" \
+     --query "${query}" ))
+
+  metric_names=($(printf "%s\n" "${metric_names[@]}" | sort -u | grep -v '\]' | grep -v '\[' | tr -d '"' | tr -d ',' ))
+  # for name in "${metric_names[@]}"; do
+  #   printf "%s\n" "${name}"
+  # done
+
+  PS3="Select metric name by number: "
+  select name in "Abort" "${metric_names[@]}"; do
+    [[  ${name} = "Abort" ]] \
+      && exit 0 \
+      || { METRIC_NAME="${name}"; return 0; }
+  done
+}
+
+
+
+__list_metrics() {
+  # for unique Metrics names
+  local query="Metrics[*].MetricName"
+  local -a metrics=()
+
+  aws cloudwatch list-metrics \
+    --namespace "${NAMESPACE}"
+  # for Metric Name, Namespace & Resource
+  # local query="Metrics[*].[MetricName,Dimensions[*].[Name,Value]]"
+  # local -a metric_names=()
+  #
+  # aws cloudwatch list-metrics \
+  #   --namespace "${NAMESPACE}" \
+  #   --query "${query}" \
+  #   --output text
+  #
+  # return
+  __choose_metric_name
+
+  echo "${NAMESPACE}"
+  echo "${METRIC_NAME}"
+
+  aws cloudwatch list-metrics \
+    --namespace "${NAMESPACE}" \
+    --metric-name "${METRIC_NAME}" \
+    --output text
+
+  return
+  metric_names=($(aws cloudwatch list-metrics \
+     --namespace "${NAMESPACE}" \
+     --metric-name "${METRIC_NAME}" ))
+
+
+  metric_names=($(printf "%s\n" "${metric_names[@]}" | sort -u | grep -v '\]' | grep -v '\[' ))
+  for name in "${metric_names[@]}"; do
+    printf "%s\n" "${name}"
+  done
+  #echo "${metric_names[@]}"
+}
+
+__list_namespaces() {
+  printf "\n----- %s -----\n" "Namespaces"
+  for name in "${!NAMESPACES[@]}"; do
+    printf "%s: ${_xsLIGHTYELLOW}%s${_xsRESET}\n" "${NAMESPACES[${name}]}" "${name}"
+  done
+
+}
+
+__choose_namespace() {
+  PS3="Select namespace by number: "
+  select name in "Abort" "${!NAMESPACES[@]}"; do
+    [[  ${name} = "Abort" ]] \
+      && exit 0 \
+      || { NAMESPACE="${name}"; return 0; }
+  done
+}
+
+__list_by() {
+  if [[ -n "${NAMESPACE}" ]]; then
+    __list_from "${NAMESPACE}"
+  else
+    #while true; do
+      __choose_namespace
+      __list_from "${NAMESPACE}"
+    #done
+  fi
+}
+
+# list currently used
+#aws cloudwatch list-metrics
+
+__list_all() {
+  local namespace="${NAMESPACE}"
+  local query
+  local -a names=()
+  local -a dimenisions=()
+  local -a namespaces=()
+  local divider='******************************************'
+  local separator='------------------------------------------'
+  # aws cloudwatch list-metrics \
+  #    --namespace "${namespace}" \
+  #    --output json
+  query='Metrics[*].Namespace'
+  namespaces=($(aws cloudwatch list-metrics \
+     --query "${query}" ))
+
+  namespaces=($(printf "%s\n" "${namespaces[@]}" | sort -u | grep -v '\]' | grep -v '\[' | tr -d '"' | tr -d ',' ))
+
+  printf '\n%s\n' "${divider}"
+  printf "\n----- %s -----\n" "All Namespaces"
+  for name in "${namespaces[@]}"; do
+    printf "%s\n" "${name}"
+  done
+
+  for name in "${namespaces[@]}"; do
+    printf '\n%s\n' "${separator}"
+    printf '\n%s\n' "Namespace: ${name}"
+    __list_by_namespace "${name}"
+    printf '%s\n' "${separator}"
+  done
+}
+
+__list_by_namespace() {
+  local namespace="${1:?namespace is required argument}"
+  local query
+  local -a metric_names=()
+  local -a dimenisions=()
+  local -a namespaces=()
+
+  query='Metrics[*].MetricName'
+  metric_names=($(aws cloudwatch list-metrics \
+     --namespace "${namespace}" \
+     --query "${query}" ))
+
+  metric_names=($(printf "%s\n" "${metric_names[@]}" | sort -u | grep -v '\]' | grep -v '\[' ))
+
+  printf "\n----- %s -----\n" "Metric Names, NS: ${namespace}"
+  for name in "${metric_names[@]}"; do
+    printf "%s\n" "${name}"
+  done
+
+  query="Metrics[*].[MetricName,Dimensions[*].[Name]]"
+  metric_names=($(aws cloudwatch list-metrics \
+     --namespace "${namespace}" \
+     --query "${query}" ))
+
+  dimensions=($(printf "%s\n" "${metric_names[@]}" | sort -u | grep -v '\]' | grep -v '\[' ))
+  printf "\n----- %s -----\n" "Dimensions, NS: ${namespace}"
+  for name in "${dimensions[@]}"; do
+    printf "%s\n" "${name}"
+  done
+}
+#  Customized Monitoring
+#   Disk Freespace
+#   Memory Ultilization
+#
+# action: put-metric-data -> cloudwatch
+#
+# Steps (use awscli)
+#  1) Create Policy -> Role
+#  2) Attach Policy to EC2 Instances
+#  3) Ansible: install python & awscli
+#
+# wget http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip
+# unzip CloudWatchMonitoringScripts-1.2.1.zip
+#  /home/ec2-user/aws-scripts-mon/mon-put-instance-data.pl --disk-path=/dev/xvda1 --disk-space-avail --disk-space-util --disk-space-used --disk-space-units=megabytes
+# */1 * * * * /home/ec2-user/aws-scripts-mon/mon-put-instance-data.pl --disk-path=/dev/xvda1 --disk-space-avail --disk-space-util --disk-space-used --disk-space-units=megabytes
+# /home/ec2-user/aws-scripts-mon/mon-get-instance-stats.pl
+# */5 * * * * ~/aws-scripts-mon/mon-put-instance-data.pl --mem-used-incl-cache-buff --mem-util --disk-space-util --disk-path=/ --from-cron
+
+:<<'METRICS'
+"Metrics": [
+    {
+        "Namespace": "AWS/EC2",
+        "Dimensions": [
+            {
+                "Name": "InstanceId",
+                "Value": "i-0c53192c1f4fd987d"
+            }
+        ],
+        "MetricName": "NetworkIn"
+METRICS
+
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --stats)
+        __get_statistics2
+        exit 0
+        ;;
+      --list-by*)
+        LIST_BY=${TRUE}
+        [[ ${arg} =~ '=' ]] && NAMESPACE="${arg#*=}"
+        ;;
+      --list-all)
+        LIST_ALL=${TRUE}
+        ;;
+      --list-metrics*)
+        LIST_METRICS=${TRUE}
+        [[ ${arg} =~ '=' ]] && NAMESPACE="${arg#*=}"
+        ;;
+
+      --list-from*)
+        LIST_FROM=${TRUE}
+        [[ ${arg} =~ '=' ]] && NAMESPACE="${arg#*=}"
+        ;;
+      --list-namespaces) LIST_NAMESPACES=${TRUE}  ;;
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( LIST_METRICS )) && __list_metrics
+  (( LIST_ALL )) && __list_all
+  (( LIST_BY )) && __list_by
+  (( LIST_FROM )) && __list_from
+  (( LIST_NAMESPACES )) && __list_namespaces
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main

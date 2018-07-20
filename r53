@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Manage Route 53 recordes & zone
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.0.4
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2017 http://www.xybersolve.com
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose:
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+
+# actions
+declare -i GET_HOSTED_ZONE=${FALSE}
+declare -i CREATE_DELEGATION_SET=${FALSE}
+declare -i GET_DELEGATION_SET=${FALSE}
+declare -i ADD_EC2=${FALSE}
+
+# script globals
+declare PARENT_ZONE_ID=''
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+__get_delegation_set() {
+  aws route53 get-reusable-delegation-set
+}
+
+
+__add_ec2() {
+  :
+}
+
+# o Create a reusable delegation set.
+# o Recreate hosted zones, and reduce the TTL to 60 seconds or less.
+# o Recreate resource record sets in the new hosted zones.
+# o Change the registrar's name servers to use the name servers  for  the
+# new hosted zones.
+# o Monitor traffic for the website or application.
+# o Change TTLs back to their original values
+
+__get_parent_zone_id() {
+  PARENT_ZONE_ID=$(aws route53 list-hosted-zones \
+    | jq '.HostedZones[] | select(.Name=="xybersolve.io.") | .Id')
+
+  PARENT_ZONE_ID=$( basename ${PARENT_ZONE_ID//\"/} )
+  echo "PARENT_ZONE_ID: ${PARENT_ZONE_ID}"
+}
+
+__get_hosted_zone() {
+
+  __get_parent_zone_id
+
+  aws route53 get-hosted-zone \
+    --id "${PARENT_ZONE_ID}"
+}
+
+
+__create_delegation_set() {
+  local uuid=$( uuidgen )
+
+  __get_parent_zone_id
+
+  aws route53 create-reusable-delegation-set \
+     --hosted-zone-id "${PARENT_ZONE_ID}" \
+     --caller-reference "${uuid}"
+}
+
+__get_delegation_set() {
+  local uuid=$( uuidgen )
+  __get_parent_zone_id
+
+  aws route53 get-reusable-delegation-set \
+    --hosted-zone-id "${PARENT_ZONE_ID}" \
+    --caller-reference "${uuid}"
+
+}
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --create-del-set) CREATE_DELEGATION_SET=${TRUE} ;;
+      --get-del-set)  GET_DELEGATION_SET=${TRUE}      ;;
+      --get-hosted-zone) GET_HOSTED_ZONE=${TRUE}      ;;
+      --data*) # --option=argument
+        USE_DATA=${TRUE}
+        [[ ${arg} =~ '=' ]] && DATA="${arg#*=}"
+        ;;
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( GET_HOSTED_ZONE )) && __get_hosted_zone
+  (( GET_DELEGATION_SET )) && __get_delegation_set
+  (( CREATE_DELEGATION_SET )) && __create_delegation_set
+
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main
