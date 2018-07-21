@@ -61,6 +61,7 @@ Examples:
 ```
 
 TODO
+- [ ] Move all image related routines to img (out of ec2)
 - [ ] Make ec2.sh lib scripts independent ec2 (e.g., no config)
 - [ ] Create sh lib for every script category (img, alm, etc)
 

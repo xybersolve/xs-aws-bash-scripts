@@ -5,7 +5,7 @@
 # ****************************************************************
 #
 # DESCRIPTION
-#    Script template for full bodied script
+#    Manage Auto-Scaling Groups
 #
 # SYNTAX & EXAMPLES
 #    See 'SYNTAX' (below)
@@ -53,13 +53,14 @@ declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
     Script: ${PROGNAME}
-    Purpose:
+    Purpose: Manage AWS Auto-Scaling Groups
     Usage: ${PROGNAME} [options]
 
     Options:
       --help:  help and usage
       --version: show version info
 
+      --show-asg=<auto-scaling group name>: Show auto scaling group
       --create-from-instance=<*like*>
       --name=<ASG Name>
       --min=<minimum size>
@@ -201,6 +202,7 @@ __get_opts() {
         SHOW_ASG=${TRUE}
         [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}"
         ;;
+
       --create*)
         CREATE_FROM_INSTANCE=${TRUE}
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}" ;;
@@ -212,6 +214,7 @@ __get_opts() {
         [[ ${arg} =~ '=' ]] && MAX="${arg#*=}" ;;
       --size*)
         [[ ${arg} =~ '=' ]] && DESIRED="${arg#*=}" ;;
+
       --delete-all)
         __delete_all
         exit 0
