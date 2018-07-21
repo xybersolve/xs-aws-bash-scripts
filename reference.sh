@@ -1,3 +1,7 @@
+#
+# General notes
+#
+
 :<<'FILTERS'
 --filters "Name=string,Values=string,string"
 

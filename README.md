@@ -60,4 +60,8 @@ Examples:
 
 ```
 
+TODO
+- [ ] Make ec2.sh lib scripts independent ec2 (e.g., no config)
+- [ ] Create sh lib for every script category (img, alm, etc)
+
 ## [License](LICENSE.md)
