@@ -12,11 +12,12 @@ __get_region_names() {
 }
 
 __get_vpc_id() {
+  local vpc_name=${1:-${VPC_NAME}}
   # if not pre-assined
   if [[ -z ${VPC_ID} ]]; then
     VPC_ID=$( \
       aws ec2 describe-vpcs \
-        --filters "Name=tag:Name,Values=${VPC_NAME}" \
+        --filters "Name=tag:Name,Values=${vpc_name}" \
         --query 'Vpcs[*].VpcId' \
         --output text
     )
@@ -25,9 +26,10 @@ __get_vpc_id() {
 }
 
 __get_public_subnet_id() {
+  local vpc_name=${1:?vpc name is required}
   #local -r public_filter='Name=tag:Tier,Values=public'
   #local -r vpc_filter="Name=vpc-id,Values=${VPC_ID}"
-  local -r name_tag_filter="Name=tag:Name,Values=${VPC_NAME}-public*"
+  local -r name_tag_filter="Name=tag:Name,Values=${vpc_name}-public*"
   local -r query='Subnets[*].SubnetId'
   #--filters "${public_filter}" \
   #  "${public_filter}" \
@@ -91,7 +93,8 @@ __get_image_id() {
 }
 
 __get_security_group_id() {
-  local filter="Name=tag:Name,Values="
+  local security_group_name=${1:-${SECURITY_GROUP_NAME}}
+  local filter="Name=tag:Name,Values=${security_group_name}"
   local query="SecurityGroups[*].GroupId"
 
   SECURITY_GROUP_ID=$(
@@ -122,11 +125,17 @@ __create_security_group(){
 }
 
 __delete_key_pair() {
-  local -r KEY_NAME="${1}"
+  local -r key_name="${1:-${KEY_NAME}}"
 
   aws ec2 delete-key-pair \
     --region ${REGION} \
-    --key-name "${KEY_NAME}"
+    --key-name "${key_name}"
+}
+
+__show_instances() {
+  aws ec2 describe-instances \
+  --query 'Reservations[*].Instances[*].{Id:InstanceId,Pub:PublicIpAddress,Pri:PrivateIpAddress,State:State.Name}' \
+  --output table
 }
 
 __get_all_instance_ids() {
@@ -235,7 +244,6 @@ __change_instance_type() {
   echo "Waiting for instance to start..."
   aws ec2 wait instance-running \
     --instance-ids "${INSTANCE_ID}"
-
 }
 
 __create_tag() {
@@ -244,6 +252,9 @@ __create_tag() {
 
   aws ec2 create-tags --tags 'Key=Scope,Value="Linux Server Management"' --resources i-yyyyyyyy i-xxxxxxxx
 }
+
+
+
 # ----------------------------------
 # RDS
 #

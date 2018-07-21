@@ -60,24 +60,37 @@ declare -r SYNTAX=$(cat <<EOF
       --help:  help and usage
       --version: show version info
       --get-image-id[=os name]
-      --get-vpc-id[=vpc name]
-      --get-sg-id[=security group name]
-      --get-pub-sub-id[=vpc name]
-      --get-inst-id-by-name=<instance name>
-      --get-inst-by-id=<id>
-      --get-inst-all-regions
+      --get-vpc-id[=vpc name]: Get the VPC Id
+      --get-sg-id[=security group name]: Get security group id
+      --get-pub-sub-id[=vpc name]: Get public subnets, using VPC name
+      --get-inst-id-by-name=<instance name>: Get instance id by name
+      --get-inst-by-id=<id>: get instance by id
+      --get-inst-all-regions: Get instances across all regions
+      --delete-key-pair=<keypair name>: Delete key pair by name
+      --show-instances: Show a table of all instances
       --start-inst=<instance name>: Start an instance by name
       --stop-inst=<instance name>: Stop an instance by name
       --terminate-inst=<instance name>: Terminate instance by name
       --change-inst-type=<instance name>: change type of instance
+      --create-image: Take snapshot AMI of instance
+
+      --region=<region>: Set region
 
     Examples:
-      --start-inst=xybersolve-prod-web*
-      --stop-inst=xybersolve-prod-web*
-      --terminate-inst=xybersolve-prod-web1
-      --change-inst-type=xybersolve-prod-web2 --type=t2.micro
-      --change-inst-type=xybersolve-prod-web2 --type=t2.medium
-
+      --get-vpc-id=*prod* --region=us-west-2
+      --get-subnets=*staging*
+      --get-pub-sub-id=*web*
+      --get-image-id=ubuntu --region=us-west-2
+      --get-sg-id=*internal
+      --get-inst-by-id=i-0a3d3a9663d252ebd
+      --get-inst-id-by-name=*web*
+      --show-instances
+      --start-inst=*staging-web*
+      --stop-inst=*staging-web*
+      --terminate-inst=*prod-web1
+      --change-inst-type=*prod-web2 --type=t2.micro
+      --change-inst-type=*prod-web2 --type=t2.medium
+      --create-image=*prod-web2 --image=Web2
 EOF
 )
 # files & directories
@@ -92,15 +105,19 @@ declare -i GET_IMAGE_ID=${FALSE}
 declare -i GET_INST_ID_BY_NAME=${FALSE}
 declare -i GET_INST_BY_ID=${FALSE}
 declare -i GET_RUNNING_INST_IDS=${FALSE}
+declare -i SHOW_INSTANCES=${FALSE}
 declare -i START_INSTANCE=${FALSE}
 declare -i STOP_INSTANCE=${FALSE}
 declare -i TERMINATE_INSTANCE=${FALSE}
 declare -i CHANGE_INSTANCE_TYPE=${FALSE}
+declare -i CREATE_IMAGE=${FALSE}
 
 # script globals
 declare INSTANCE_NAME
 declare INSTANCE_ID
 declare INSTANCE_TYPE='t2.micro'
+declare IMAGE_NAME=''
+
 
 
 # ---------------------------------------
@@ -165,6 +182,9 @@ __get_opts() {
         GET_IMAGE_ID=${TRUE}
         [[ ${arg} =~ '=' ]] && IMAGE_OS="${arg#*=}"
         ;;
+      --show-instances)
+        SHOW_INSTANCES=${TRUE}
+        ;;
       --get-inst-id-by-name*)
         GET_INST_ID_BY_NAME=${TRUE}
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
@@ -177,15 +197,6 @@ __get_opts() {
         ;;
       --get-running-inst-ids)
         GET_RUNNING_INST_IDS=${TRUE} ;;
-      ## Debug Routines
-      --get-region-names)
-        __get_region_names ;;
-
-      --get-inst-all-region*)
-        __get_instances_all_regions ;;
-
-      --get-rds-all-region*)
-        __get_rds_all_regions ;;
 
       --stop-inst*)
         STOP_INSTANCE=${TRUE}
@@ -199,7 +210,6 @@ __get_opts() {
         TERMINATE_INSTANCE=${TRUE}
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
         ;;
-
       --change-inst-type*)
         CHANGE_INSTANCE_TYPE=${TRUE}
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
@@ -209,6 +219,30 @@ __get_opts() {
         [[ ${arg} =~ '=' ]] && INSTANCE_TYPE="${arg#*=}"
         #echo "INSTANCE_ID: ${INSTANCE_ID}"
         ;;
+      --create-image*)
+        CREATE_IMAGE=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+      --image*)
+        [[ ${arg} =~ '=' ]] && IMAGE_NAME="${arg#*=}"
+        ;;
+      --region*)
+        [[ ${arg} =~ '=' ]] && REGION="${arg#*=}"
+        ;;
+      --os*)
+        [[ ${arg} =~ '=' ]] && IMAGE_OS="${arg#*=}"
+        ;;
+
+      ## Debug Routines
+      --get-region-names)
+        __get_region_names ;;
+
+      --get-inst-all-region*)
+        __get_instances_all_regions ;;
+
+      --get-rds-all-region*)
+        __get_rds_all_regions ;;
+
 
       *) die "Unknown option: ${arg}" ;;
    esac
@@ -219,17 +253,19 @@ __get_opts() {
 __dispatch() {
   # dispatch enables all variable assignment before any calls are made
   # mostly calls to ec2-sh with argument
-  (( GET_VPC_ID )) && __get_vpc_id
-  (( GET_IMAGE_ID )) && __get_image_id
-  (( GET_PUBLIC_SUBNET_ID )) && __get_public_subnet_id
+  (( GET_VPC_ID )) && __get_vpc_id "${VPC_NAME}"
+  (( GET_IMAGE_ID )) && __get_image_id "${REGION}" "${OS_NAME}"
+  (( GET_PUBLIC_SUBNET_ID )) && __get_public_subnet_id "${VPC_NAME}"
   (( GET_SECURITY_GROUP_ID )) && __get_security_group_id
   (( GET_INST_ID_BY_NAME )) && __get_instance_id_by_name "${INSTANCE_NAME}"
   (( GET_INST_BY_ID )) && __get_instance_by_id "${INSTANCE_ID}"
   (( GET_RUNNING_INST_IDS )) && __get_running_instance_ids
+  (( SHOW_INSTANCES )) && __show_instances
   #
   (( START_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
   (( STOP_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
   (( TERMINATE_INSTANCE )) && __terminate_instance "${INSTANCE_NAME}"
+  (( CREATE_IMAGE )) && __create_image "${INSTANCE_NAME}" "${IMAGE_NAME}"
 
   (( CHANGE_INSTANCE_TYPE )) && __change_instance_type "${INSTANCE_NAME}" "${INSTANCE_TYPE}"
   return 0
