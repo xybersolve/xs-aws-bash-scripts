@@ -57,6 +57,14 @@ __get_subnets() {
   }
 }
 
+__get_network_acls() {
+  local vpc_name="${1:-${VPC_NAME}}"
+  local VPC_ID=$( __get_vpc_id "${vpc_name}" )
+
+  aws ec2 describe-network-acls \
+    --filters Name=vpc-id,Values=${VPC_ID}
+}
+
 __get_image_id() {
   local region=${1:-${REGION}}
   local os=${2:-${IMAGE_OS}}
@@ -188,6 +196,19 @@ __get_instances_all_regions() {
     __get_instances_by_region "${region}"
   done
 }
+
+__get_instance_attributes() {
+  echo "__get_instance_attributes"
+  local instance_name=${1:?Instance name is requiredF argument}
+  local instance_id=$( __get_instance_id_by_name "${instance_name}" )
+  echo "__get_instance_attributes: ${instance_name}, ${instance_id}"
+
+  aws ec2 describe-instance-attribute \
+   --instance-id ${instance-id} \
+   --attribute disableApiTermination
+
+}
+
 __start_instance() {
   local name=${1:?name argument is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )

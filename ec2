@@ -75,6 +75,7 @@ declare -r SYNTAX=$(cat <<EOF
       --create-image: Take snapshot AMI of instance
 
       --region=<region>: Set region
+      --name=<name like>L Set instance name (like)
 
     Examples:
       --get-vpc-id=*prod* --region=us-west-2
@@ -104,6 +105,7 @@ declare -i GET_SECURITY_GROUP_ID=${FALSE}
 declare -i GET_IMAGE_ID=${FALSE}
 declare -i GET_INST_ID_BY_NAME=${FALSE}
 declare -i GET_INST_BY_ID=${FALSE}
+declare -i GET_INST_ATTRS=${FALSE}
 declare -i GET_RUNNING_INST_IDS=${FALSE}
 declare -i SHOW_INSTANCES=${FALSE}
 declare -i START_INSTANCE=${FALSE}
@@ -113,8 +115,8 @@ declare -i CHANGE_INSTANCE_TYPE=${FALSE}
 declare -i CREATE_IMAGE=${FALSE}
 
 # script globals
-declare INSTANCE_NAME
-declare INSTANCE_ID
+declare INSTANCE_NAME=''
+declare INSTANCE_ID=''
 declare INSTANCE_TYPE='t2.micro'
 declare IMAGE_NAME=''
 
@@ -195,6 +197,11 @@ __get_opts() {
         [[ ${arg} =~ '=' ]] && INSTANCE_ID="${arg#*=}"
         #echo "INSTANCE_ID: ${INSTANCE_ID}"
         ;;
+      --get-inst-attrs*)
+        GET_INST_BY_ATTRS=${TRUE}
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
+
       --get-running-inst-ids)
         GET_RUNNING_INST_IDS=${TRUE} ;;
 
@@ -232,6 +239,9 @@ __get_opts() {
       --os*)
         [[ ${arg} =~ '=' ]] && IMAGE_OS="${arg#*=}"
         ;;
+      --name*)
+        [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
+        ;;
 
       ## Debug Routines
       --get-region-names)
@@ -259,6 +269,7 @@ __dispatch() {
   (( GET_SECURITY_GROUP_ID )) && __get_security_group_id
   (( GET_INST_ID_BY_NAME )) && __get_instance_id_by_name "${INSTANCE_NAME}"
   (( GET_INST_BY_ID )) && __get_instance_by_id "${INSTANCE_ID}"
+  (( GET_INST_ATTRS )) && __get_instance_attributes "${INSTANCE_NAME}"
   (( GET_RUNNING_INST_IDS )) && __get_running_instance_ids
   (( SHOW_INSTANCES )) && __show_instances
   #
