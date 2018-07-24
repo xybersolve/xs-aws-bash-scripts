@@ -1,7 +1,15 @@
 # xs-aws-bash-scripts
 
-> Bash script that encapsulates AWS cli interface to make it easier to use in
-real admin. A work in progress
+Bash script that encapsulates AWS cli to make it easier to use in
+real world admin. While orchestration is better handled with high level tool,
+like Terraform, awscli is extremely useful for managing resources from
+the command line.
+
+> This is a work in progress. Ultimately, I want detachable lib scripts
+(ext: *.sh), which can be consumed by any other script, with no dependencies.
+They will be fronted by a script of the same name (minus .sh), which will act
+as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
+
 
 ## Scripts:
 * alm: Alarms
@@ -62,7 +70,7 @@ Examples:
 
 TODO
 - [ ] Move all image related routines to img (out of ec2)
-- [ ] Make ec2.sh lib scripts independent ec2 (e.g., no config)
-- [ ] Create sh lib for every script category (img, alm, etc)
+- [ ] Make ec2.sh lib routines independent (e.g., no config or dependencies)
+- [ ] Create sh lib for every script category (img, alm, etc), move actual routines to lib scripts.
 
 ## [License](LICENSE.md)
