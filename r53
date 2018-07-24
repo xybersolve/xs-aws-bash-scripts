@@ -174,7 +174,7 @@ __get_opts() {
       --create-del-set) CREATE_DELEGATION_SET=${TRUE} ;;
       --get-del-set)  GET_DELEGATION_SET=${TRUE}      ;;
       --get-hosted-zone) GET_HOSTED_ZONE=${TRUE}      ;;
-      --data*) # --option=argument
+      --data*) 
         USE_DATA=${TRUE}
         [[ ${arg} =~ '=' ]] && DATA="${arg#*=}"
         ;;

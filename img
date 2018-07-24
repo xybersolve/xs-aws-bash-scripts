@@ -5,7 +5,7 @@
 # ****************************************************************
 #
 # DESCRIPTION
-#    Script template for full bodied script
+#    Manage AWS Images
 #
 # SYNTAX & EXAMPLES
 #    See 'SYNTAX' (below)
@@ -53,7 +53,7 @@ declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
     Script: ${PROGNAME}
-    Purpose:
+    Purpose: Manage AWS Images
     Usage: ${PROGNAME} [-h|--help] [-v|--version]
 
     Options:

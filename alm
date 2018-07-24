@@ -118,10 +118,6 @@ __get_opts() {
       --help)    show_help                ;;
       --version) show_version             ;;
       --list) LIST=${TRUE}   ;;
-      --quotes*) # --option=argument
-        SPEAK_DATA=${TRUE}
-        [[ ${arg} =~ '=' ]] && VOICE="${arg#*=}"
-        ;;
       *) die "Unknown option: ${arg}" ;;
    esac
   done

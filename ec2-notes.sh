@@ -6,3 +6,21 @@ Allowed instance types:
     i2.xlarge | i2.2xlarge | i2.4xlarge | i2.8xlarge | d2.xlarge | d2.2xlarge | d2.4xlarge | d2.8xlarge
     g2.2xlarge | g2.8xlarge
 INSTANCE_TYPES
+
+
+:<<'INSTANCE_ATTRIBUTES'
+instanceType
+kernel
+ramdisk
+userData
+disableApiTermination
+instanceInitiatedShutdownBehavior
+rootDeviceName
+blockDeviceMapping
+productCodes
+sourceDestCheck
+groupSet
+ebsOptimized
+sriovNetSupport
+enaSupport
+INSTANCE_ATTRIBUTES

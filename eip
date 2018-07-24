@@ -53,7 +53,7 @@ declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
     Script: ${PROGNAME}
-    Purpose:
+    Purpose: Manage Elastic IPs 
     Usage: ${PROGNAME} [options]
 
     Options:
@@ -125,19 +125,6 @@ __get_opts() {
     case ${arg} in
       --help)    show_help                ;;
       --version) show_version             ;;
-      --ips)            GET_IPS=${TRUE}   ;;
-      --log-local)
-        __log_local_clients
-        exit 0
-        ;;
-      --list-pref*) # --option argument
-        __nwsu.list_preferred "${1}"
-        exit 0
-        ;;
-      --quotes*) # --option=argument
-        SPEAK_DATA=${TRUE}
-        [[ ${arg} =~ '=' ]] && VOICE="${arg#*=}"
-        ;;
       *) die "Unknown option: ${arg}" ;;
    esac
   done

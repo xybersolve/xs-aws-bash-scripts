@@ -121,11 +121,6 @@ __get_opts() {
     case ${arg} in
       --help)    show_help                ;;
       --version) show_version             ;;
-      --ips)            GET_IPS=${TRUE}   ;;
-      --quotes*) # --option=argument
-        SPEAK_DATA=${TRUE}
-        [[ ${arg} =~ '=' ]] && VOICE="${arg#*=}"
-        ;;
       *) die "Unknown option: ${arg}" ;;
    esac
   done
