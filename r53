@@ -60,6 +60,10 @@ declare -r SYNTAX=$(cat <<EOF
       --help:  help and usage
       --version: show version info
 
+      --create-del-set: Create delegation set
+      --get-del-set: Get delegation set
+      --get-hosted-zone: Get hosted zone id
+
 EOF
 )
 # files & directories
