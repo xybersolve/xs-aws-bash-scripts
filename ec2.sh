@@ -238,11 +238,11 @@ __terminate_instance() {
 
 __change_instance_type() {
   local name=${1:?name argument is required}
-  #local type=${2:?type argment is required}
+  local type=${2:?type argment is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
   echo "INSTANCE_ID: ${INSTANCE_ID}"
   echo "INSTANCE_TYPE: ${INSTANCE_TYPE}"
-  #return
+  return
 
   echo "Stopping instance..."
   aws ec2 stop-instances \
@@ -257,7 +257,7 @@ __change_instance_type() {
     --instance-id "${INSTANCE_ID}" \
     --instance-type "${INSTANCE_TYPE}"
 
-  echo "Wait a spell..."
+  echo "Wait 3 seconds..."
   sleep 3
 
   echo "Starting instance..."
