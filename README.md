@@ -67,6 +67,27 @@ Examples:
   --create-image=*prod-web2 --image=Web2
 
 ```
+#### img
+> sources ec2.sh
+
+```sh
+Script: img
+Purpose: Manage AWS Images
+Usage: img [options]
+
+Options:
+  --help:  help and usage
+  --version: show version info
+  --get-ami-id=<ami type>: Get EC2 AMI id
+  --create=<instance name>: Create AMI Image from instance (stop, create & start)
+  --image=<name>: Set image name
+
+Examples:
+  img --get-ami-id=ubuntu (ubuntu, trusty, xenial, amazon, linux)
+  img --create=*prod-web2 --image=prod-web2
+
+
+```
 
 TODO
 - [ ] Move all image related routines to img (out of ec2)
