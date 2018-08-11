@@ -274,7 +274,7 @@ __dispatch() {
   (( SHOW_INSTANCES )) && __show_instances
   #
   (( START_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
-  (( STOP_INSTANCE )) && __start_instance "${INSTANCE_NAME}"
+  (( STOP_INSTANCE )) && __stop_instance "${INSTANCE_NAME}"
   (( TERMINATE_INSTANCE )) && __terminate_instance "${INSTANCE_NAME}"
   (( CREATE_IMAGE )) && __create_image "${INSTANCE_NAME}" "${IMAGE_NAME}"
 

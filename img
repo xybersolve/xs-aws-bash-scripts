@@ -61,7 +61,7 @@ declare -r SYNTAX=$(cat <<EOF
       -v| --version: show version info
 
       --get-ami-id=<ami type>: Get EC2 AMI id
-      --create=<instance name>: Create AMI Image from instance
+      --create=<instance name>: Create AMI Image from instance (stop, create & start)
       --image=<name>: Set image name
 
     Example:
@@ -163,19 +163,29 @@ __fix_resolve() {
 }
 
 __create_image() {
-  local instance_name=${1:?name argument is required}
+  local instance_name=${1:?instance name argument is required}
   local image_name=${2?image name is required argument}
+  local datetime=$( date +'%Y%m%d')
   local instance_id=$( __get_instance_id_by_name "${instance_name}" )
+  local name="${image_name}-${datetime}"
+  local description="Copy of ${image_name}-${instance_id}-${datetime}"
 
   echo "instance_name: ${instance_name}"
   echo "instance_id: ${instance_id}"
   echo "image_name: ${image_name}"
-  return
+  echo "name: ${name}"
+  echo "description: ${description}"
+
+  #return
+  __stop_instance "${instance_name}"
 
   aws ec2 create-image \
     --instance-id "${instance_id}" \
-    --name "${image_name}" \
-    --description "Copy of ${image_name}-${instance_id}"
+    --name "${name}" \
+    --description "${description}"
+
+  __start_instance "${instance_name}"
+
 }
 
 __get_opts() {

@@ -212,17 +212,19 @@ __get_instance_attributes() {
 __start_instance() {
   local name=${1:?name argument is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
-  echo "Starting: ${INSTANCE_ID}"
-  return
-  aws ec2 start-instance \
+  #echo "Starting: ${INSTANCE_ID}"; return;
+  aws ec2 start-instances \
     --instance-id "${INSTANCE_ID}"
 }
 
 __stop_instance() {
   local name=${1:?name argument is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
-  aws ec2 stop-instance \
+  aws ec2 stop-instances \
     --instance-id "${INSTANCE_ID}"
+
+  aws ec2 wait instance-stopped \
+    --instance-ids "${INSTANCE_ID}"
 }
 
 __terminate_instance() {
