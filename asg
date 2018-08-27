@@ -62,6 +62,7 @@ declare -r SYNTAX=$(cat <<EOF
 
       --show-asg=<auto-scaling group name>: Show auto scaling group
       --show-asgs: show all auto-scaling-groups
+      --show-lcs: show all launch configurations
 
       --create-from-instance=<*like*>
       --name=<ASG Name>
@@ -81,7 +82,6 @@ declare -r SYNTAX=$(cat <<EOF
       ${PROGNAME} --delete-asg=web-prod-asg
       ${PROGNAME} --delete-lc=web-prod-lc
       ${PROGNAME} --delete-all
-
 
 EOF
 )
@@ -136,12 +136,31 @@ show_help() {
 source "${LIB_FILE}" \
   || die "Unable to open lib file: ${LIB_FILE}" 1
 
-  source "${CONF_FILE}" \
-    || die "Unable to open conf file: ${CONF_FILE}" 2
+source "${CONF_FILE}" \
+  || die "Unable to open conf file: ${CONF_FILE}" 2
 
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
 # aws autoscaling attach-instances --instance-ids i-a8e09d9c --auto-scaling-group-name my-asg
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
+# Create launch configurations: from image, instance and configured 
+# aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --image-id ami-c6169af6 --instance-type m1.medium
+# aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --key-name my-key-pair --image-id ami-c6169af6 --instance-type m1.small --user-data file://myuserdata.txt
+# aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --key-name my-key-pair --instance-id i-7e13c876 --security-groups sg-eb2af88e --instance-type m1.small --user-data file://myuserdata.txt --instance-monitoring Enabled=true --no-ebs-optimized --no-associate-public-ip-address --placement-tenancy dedicated --iam-instance-profile my-autoscaling-role
+# Attach Instance
+# aws autoscaling attach-instances --instance-ids i-a8e09d9c --auto-scaling-group-name my-asg
+# Detach Instance
+# aws autoscaling detach-instances --instance-ids i-2a2d8978 --auto-scaling-group-name my-asg --should-decrement-desired-capacity
+# verify attachment/detatchment
+# aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
+# Attach Load Balancers
+# ELB Classic (attach)
+# aws autoscaling attach-load-balancers --auto-scaling-group-name my-asg --load-balancer-names my-lb
+# ELB Classic (detatch)
+# aws autoscaling detach-load-balancers --auto-scaling-group-name my-asg --load-balancer-names my-lb
+# Target Group by ARN
+# aws autoscaling attach-load-balancer-target-groups --auto-scaling-group-name my-asg --target-group-arns my-targetgroup-arn
+# detatch
+# aws autoscaling detach-load-balancer-target-groups --auto-scaling-group-name my-asg --target-group-arns my-targetgroup-arn
 
 __create_from_instance() {
   local dryrun=''
@@ -176,15 +195,15 @@ __show_launch_cfg() {
     --launch-configuration-names "${LAUNCH_CFG_NAME}"
 }
 
-__show_autoscaling_group() {
-  aws autoscaling describe-auto-scaling-groups \
-    --auto-scaling-group-names "${ASG_NAME}"
-}
-
-__show_autoscaling_groups() {
+__show_launch_cfgs() {
   aws autoscaling describe-launch-configurations \
     --query "LaunchConfigurations[*].[LaunchConfigurationName]" \
     --output text
+}
+
+__show_autoscaling_group() {
+  aws autoscaling describe-auto-scaling-groups \
+    --auto-scaling-group-names "${ASG_NAME}"
 }
 
 __delete_asg() {
@@ -220,6 +239,10 @@ __get_opts() {
         ;;
       --show-asgs)
         __show_autoscaling_groups; exit 0; ;;
+
+      --show-lcs)
+        __show_launch_cfgs; exit 0; ;;
+
       --show-asg*)
         SHOW_ASG=${TRUE}
         [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}"
@@ -240,6 +263,10 @@ __get_opts() {
       --delete-asg*)
         [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}"
         __delete_asg; exit 0; ;;
+
+      --delete-lc*)
+        [[ ${arg} =~ '=' ]] && LAUNCH_CFG_NAME="${arg#*=}"
+        __delete_lc ; exit 0; ;;
 
       --delete-all)
         __delete_all
