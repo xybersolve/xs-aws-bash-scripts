@@ -117,7 +117,7 @@ declare -i CREATE_IMAGE=${FALSE}
 # script globals
 declare INSTANCE_NAME=''
 declare INSTANCE_ID=''
-declare INSTANCE_TYPE='t2.micro'
+declare INSTANCE_TYPE='t2.medium'
 declare IMAGE_NAME=''
 
 

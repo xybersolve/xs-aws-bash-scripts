@@ -61,16 +61,26 @@ declare -r SYNTAX=$(cat <<EOF
       --version: show version info
 
       --show-asg=<auto-scaling group name>: Show auto scaling group
+      --show-asgs: show all auto-scaling-groups
+
       --create-from-instance=<*like*>
       --name=<ASG Name>
       --min=<minimum size>
       --max=<maximum size>
       --size=<desired size>
 
+      --delete-asg[=name]: delete auto-scaling-group, by name or default
+      --delete-lc[=name]: delete launch configuration, by name or default
+      --delete-all: delete all autoscaling groups
+
     Examples:
       ${PROGNAME} --create=*web* --name=web-asg --min=1 --max=2 --size=1
       ${PROGNAME} --show-asg=*web*
+      ${PROGNAME} --show-asgs
       ${PROGNAME} --show-launch=*web*
+      ${PROGNAME} --delete-asg=web-prod-asg
+      ${PROGNAME} --delete-lc=web-prod-lc
+      ${PROGNAME} --delete-all
 
 
 EOF
@@ -78,6 +88,7 @@ EOF
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
 declare -r LIB_FILE="${SCRIPT_DIR}/ec2.sh"
+declare -r CONF_FILE="${SCRIPT_DIR}/asg.conf.sh"
 
 # actions
 declare -i CREATE_FROM_INSTANCE=${FALSE}
@@ -88,14 +99,6 @@ declare -i SHOW_LAUNCH=${FALSE}
 declare -i DRYRUN=${FALSE}
 
 # script globals
-declare ASG_NAME=''
-declare LAUNCH_NAME=''
-declare INSTANCE_NAME=''
-declare INSTANCE_ID=''
-declare NAME='my-asg'
-declare MIN=1
-declare MAX=2
-declare DESIRED=1
 
 # ---------------------------------------
 # COMMON FUNCTIONS
@@ -133,6 +136,9 @@ show_help() {
 source "${LIB_FILE}" \
   || die "Unable to open lib file: ${LIB_FILE}" 1
 
+  source "${CONF_FILE}" \
+    || die "Unable to open conf file: ${CONF_FILE}" 2
+
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
 # aws autoscaling attach-instances --instance-ids i-a8e09d9c --auto-scaling-group-name my-asg
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
@@ -158,7 +164,7 @@ __create_from_instance() {
   (( DRYRUN )) && dryrun='echo'
 
   "${dryrun}" aws autoscaling create-auto-scaling-group \
-    --auto-scaling-group-name "${NAME}" \
+    --auto-scaling-group-name "${ASG_NAME}" \
     --instance-id "${instance_id}" \
     --min-size ${MIN} \
     --max-size ${MAX} \
@@ -167,12 +173,26 @@ __create_from_instance() {
 
 __show_launch_cfg() {
   aws autoscaling describe-launch-configurations \
-    --launch-configuration-names "${ASG_NAME}"
+    --launch-configuration-names "${LAUNCH_CFG_NAME}"
 }
 
 __show_autoscaling_group() {
   aws autoscaling describe-auto-scaling-groups \
     --auto-scaling-group-names "${ASG_NAME}"
+}
+
+__show_autoscaling_groups() {
+  aws autoscaling describe-launch-configurations \
+    --query "LaunchConfigurations[*].[LaunchConfigurationName]" \
+    --output text
+}
+
+__delete_asg() {
+  aws autoscaling delete-auto-scaling-group --auto-scaling-group-name "${ASG_NAME}"
+}
+
+__delete_lc() {
+  aws autoscaling delete-launch-configuration --launch-configuration-name "${LAUNCH_CFG_NAME}"
 }
 
 __delete_all() {
@@ -196,8 +216,10 @@ __get_opts() {
       --dryrun|--dry-run) DRYRUN=${TRUE}  ;;
       --show-launch*)
         SHOW_LAUNCH=${TRUE}
-        [[ ${arg} =~ '=' ]] && LAUNCH_NAME="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && LAUNCH_CFG_NAME="${arg#*=}"
         ;;
+      --show-asgs)
+        __show_autoscaling_groups; exit 0; ;;
       --show-asg*)
         SHOW_ASG=${TRUE}
         [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}"
@@ -207,13 +229,17 @@ __get_opts() {
         CREATE_FROM_INSTANCE=${TRUE}
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}" ;;
       --name*)
-        [[ ${arg} =~ '=' ]] && NAME="${arg#*=}" ;;
+        [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}" ;;
       --min*)
         [[ ${arg} =~ '=' ]] && MIN="${arg#*=}" ;;
       --max*)
         [[ ${arg} =~ '=' ]] && MAX="${arg#*=}" ;;
       --size*)
         [[ ${arg} =~ '=' ]] && DESIRED="${arg#*=}" ;;
+
+      --delete-asg*)
+        [[ ${arg} =~ '=' ]] && ASG_NAME="${arg#*=}"
+        __delete_asg; exit 0; ;;
 
       --delete-all)
         __delete_all
