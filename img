@@ -62,12 +62,12 @@ declare -r SYNTAX=$(cat <<EOF
 
       --get-ami-id=<ami type>: Get EC2 AMI id
       --create=<instance name>: Create AMI Image from instance (stop, create & start)
-      --image=<name>: Set image name
+      --image=<name>: Set image name (date stamp automaitcally appended)
+
 
     Example:
       ${PROGNAME} --get-ami-id=ubuntu (ubuntu, trusty, xenial, amazon, linux)
       ${PROGNAME} --create=*prod-web2 --image=web2
-
 EOF
 )
 # files & directories
@@ -82,7 +82,9 @@ declare -i CREATE_IMAGE=${FALSE}
 # script globals
 declare OS='ubuntu'
 declare REGION='us-west-2'
-declare IMAGE_ID
+declare IMAGE_ID=''
+declare IMAGE_NAME=''
+declare INSTANCE_NAME=''
 
 # ---------------------------------------
 # COMMON FUNCTIONS
@@ -163,25 +165,29 @@ __fix_resolve() {
 }
 
 __create_image() {
-  local instance_name=${1:?instance name argument is required}
-  local image_name=${2?image name is required argument}
+  local instance_name=${1}
+  local image_name=${2}
   local datetime=$( date +'%Y%m%d')
   local instance_id=$( __get_instance_id_by_name "${instance_name}" )
-  local name="${image_name}-${datetime}"
   local description="Copy of ${image_name}-${instance_id}-${datetime}"
 
+  [[ -z ${instance_id} ]] && die "Instance ID could not be determined" 2
+  [[ -z ${image_name} ]] && die "Image name is required" 3
+
+  image_name="${image_name}-${datetime}"
+
+  echo "Creating image"
   echo "instance_name: ${instance_name}"
   echo "instance_id: ${instance_id}"
   echo "image_name: ${image_name}"
-  echo "name: ${name}"
   echo "description: ${description}"
+  return
 
-  #return
   __stop_instance "${instance_name}"
 
   aws ec2 create-image \
     --instance-id "${instance_id}" \
-    --name "${name}" \
+    --name "${image_name}" \
     --description "${description}"
 
   __start_instance "${instance_name}"
@@ -205,6 +211,7 @@ __get_opts() {
       --image*)
         [[ ${arg} =~ '=' ]] && IMAGE_NAME="${arg#*=}"
         ;;
+      --stamp) STAMP=${TRUE}  ;;
 
       *) die "Unknown option: ${arg}" ;;
    esac
