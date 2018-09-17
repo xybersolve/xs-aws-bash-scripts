@@ -47,6 +47,17 @@ __get_public_subnet_id() {
   echo "${SUBNET_ID}"
 }
 
+__get_public_ip() {
+  INSTANCE_ID=$( __get_instance_id_by_name "${INSTANCE_NAME}" )
+  #echo "INSTANCE_ID: ${INSTANCE_ID}"
+  PUBLIC_IP=$( aws ec2 describe-instances \
+    --instance-ids "${INSTANCE_ID}" \
+    --query "Reservations[*].Instances[*].PublicIpAddress" \
+    --output=text )
+
+  echo "${PUBLIC_IP}"
+}
+
 __get_subnets() {
   local vpc_id=${1:-${VPC_ID}}
   local -r vpc_id_filter="Name=vpc-id,Values=${vpc_id}"
@@ -75,7 +86,8 @@ __get_image_id() {
 
   # amzn-ami-hvm-2017.03.0.20170417-x86_64-gp2
   # ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20170414
-  [[ -z ${os} ]] && die "OS is required field: --os=<os>"
+  [[ -z ${os} ]] && { echo "OS is required field: --os=<os>"; exit 1; }
+
   local -A os_name=(
     ['ubuntu']='ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64*'
     ['trusty']='ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64*'
@@ -240,11 +252,14 @@ __change_instance_type() {
   local name=${1:?name argument is required}
   local type=${2:?type argment is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
+  PUBLIC_IP=$( __get_public_ip "${name}" )
   echo "INSTANCE_ID: ${INSTANCE_ID}"
   echo "INSTANCE_TYPE: ${INSTANCE_TYPE}"
+  echo "PUBLIC_IP: ${PUBLIC_IP}"
   return
 
   echo "Stopping instance..."
+  # __stop_instance
   aws ec2 stop-instances \
     --instance-id "${INSTANCE_ID}"
 
@@ -257,7 +272,7 @@ __change_instance_type() {
     --instance-id "${INSTANCE_ID}" \
     --instance-type "${INSTANCE_TYPE}"
 
-  echo "Wait 3 seconds..."
+  echo "Waiting 3 seconds..."
   sleep 3
 
   echo "Starting instance..."
@@ -267,6 +282,11 @@ __change_instance_type() {
   echo "Waiting for instance to start..."
   aws ec2 wait instance-running \
     --instance-ids "${INSTANCE_ID}"
+
+  echo "Re-associate EIP"
+  aws ec2 associate-address \
+    --instance-id ${INSTANCE_ID} \
+    --public-ip ${PUBLIC_IP}
 }
 
 __create_tag() {

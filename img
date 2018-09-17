@@ -63,11 +63,12 @@ declare -r SYNTAX=$(cat <<EOF
       --get-ami-id=<ami type>: Get EC2 AMI id
       --create=<instance name>: Create AMI Image from instance (stop, create & start)
       --image=<name>: Set image name (date stamp automaitcally appended)
-
+      --stop: Flag to stop instance before creating image
 
     Example:
       ${PROGNAME} --get-ami-id=ubuntu (ubuntu, trusty, xenial, amazon, linux)
       ${PROGNAME} --create=*prod-web2 --image=web2
+      ${PROGNAME} --create=*prod-web2 --image=web2 --stop
 EOF
 )
 # files & directories
@@ -78,6 +79,9 @@ declare -r EC2_LIB_FILE="${SCRIPT_DIR}/ec2.sh"
 # actions
 declare -i GET_AMI_ID=${FALSE}
 declare -i CREATE_IMAGE=${FALSE}
+
+# flags
+declare -i STOP=${FALSE}
 
 # script globals
 declare OS='ubuntu'
@@ -181,16 +185,15 @@ __create_image() {
   echo "instance_id: ${instance_id}"
   echo "image_name: ${image_name}"
   echo "description: ${description}"
-  return
-
-  __stop_instance "${instance_name}"
+  # return
+  (( STOP )) && __stop_instance "${instance_name}"
 
   aws ec2 create-image \
     --instance-id "${instance_id}" \
     --name "${image_name}" \
     --description "${description}"
 
-  __start_instance "${instance_name}"
+  (( STOP )) && __start_instance "${instance_name}"
 
 }
 
@@ -211,6 +214,7 @@ __get_opts() {
       --image*)
         [[ ${arg} =~ '=' ]] && IMAGE_NAME="${arg#*=}"
         ;;
+      --stop)  STOP=${TRUE}   ;;
       --stamp) STAMP=${TRUE}  ;;
 
       *) die "Unknown option: ${arg}" ;;
