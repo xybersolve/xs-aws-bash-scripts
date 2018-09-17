@@ -253,10 +253,12 @@ __change_instance_type() {
   local type=${2:?type argment is required}
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
   PUBLIC_IP=$( __get_public_ip "${name}" )
+
   echo "INSTANCE_ID: ${INSTANCE_ID}"
   echo "INSTANCE_TYPE: ${INSTANCE_TYPE}"
   echo "PUBLIC_IP: ${PUBLIC_IP}"
-  return
+
+  (( DRYRUN )) && return
 
   echo "Stopping instance..."
   # __stop_instance

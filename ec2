@@ -77,6 +77,7 @@ declare -r SYNTAX=$(cat <<EOF
 
       --region=<region>: Set region
       --name=<name like>: Set instance name (like)
+      --dryrun: Do dry run on some routine
 
     Examples:
       ${PROGNAME} --get-vpc-id=*prod* --region=us-west-2
@@ -94,6 +95,7 @@ declare -r SYNTAX=$(cat <<EOF
       ${PROGNAME} --change-inst-type=*prod-web2 --type=t2.micro
       ${PROGNAME} --change-inst-type=*prod-web2 --type=t2.medium
       ${PROGNAME} --create-image=*prod-web2 --image=Web2
+      ${PROGNAME} --create-image=*prod-web2 --image=Web2 --dryrun
 EOF
 )
 # files & directories
@@ -116,6 +118,9 @@ declare -i STOP_INSTANCE=${FALSE}
 declare -i TERMINATE_INSTANCE=${FALSE}
 declare -i CHANGE_INSTANCE_TYPE=${FALSE}
 declare -i CREATE_IMAGE=${FALSE}
+
+# flags
+declare -i DRYRUN=${FALSE}
 
 # script globals
 declare INSTANCE_NAME=''
