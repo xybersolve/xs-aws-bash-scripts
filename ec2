@@ -79,21 +79,21 @@ declare -r SYNTAX=$(cat <<EOF
       --name=<name like>: Set instance name (like)
 
     Examples:
-      --get-vpc-id=*prod* --region=us-west-2
-      --get-subnets=*prod-staging*
-      --get-pub-sub-id=*prod-web*
-      --get-public-ip=*prod-web2
-      --get-image-id=ubuntu --region=us-west-2
-      --get-sg-id=*internal
-      --get-inst-by-id=i-0a3d3a9663d252ebd
-      --get-inst-id-by-name=*web*
-      --show-instances
-      --start-inst=*staging-web*
-      --stop-inst=*staging-web*
-      --terminate-inst=*prod-web1
-      --change-inst-type=*prod-web2 --type=t2.micro
-      --change-inst-type=*prod-web2 --type=t2.medium
-      --create-image=*prod-web2 --image=Web2
+      ${PROGNAME} --get-vpc-id=*prod* --region=us-west-2
+      ${PROGNAME} --get-subnets=*prod-staging*
+      ${PROGNAME} --get-pub-sub-id=*prod-web*
+      ${PROGNAME} --get-public-ip=*prod-web2
+      ${PROGNAME} --get-image-id=ubuntu --region=us-west-2
+      ${PROGNAME} --get-sg-id=*internal
+      ${PROGNAME} --get-inst-by-id=i-0a3d3a9663d252ebd
+      ${PROGNAME} --get-inst-id-by-name=*web*
+      ${PROGNAME} --show-instances
+      ${PROGNAME} --start-inst=*staging-web*
+      ${PROGNAME} --stop-inst=*staging-web*
+      ${PROGNAME} --terminate-inst=*prod-web1
+      ${PROGNAME} --change-inst-type=*prod-web2 --type=t2.micro
+      ${PROGNAME} --change-inst-type=*prod-web2 --type=t2.medium
+      ${PROGNAME} --create-image=*prod-web2 --image=Web2
 EOF
 )
 # files & directories
@@ -123,7 +123,6 @@ declare INSTANCE_ID=''
 declare INSTANCE_TYPE='t2.medium'
 declare IMAGE_NAME=''
 declare PUBLIC_IP=''
-
 
 # ---------------------------------------
 # COMMON FUNCTIONS
