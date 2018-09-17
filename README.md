@@ -52,8 +52,9 @@ Options:
 
 Examples:
   --get-vpc-id=*prod* --region=us-west-2
-  --get-subnets=*staging*
-  --get-pub-sub-id=*web*
+  --get-subnets=*prod-staging*
+  --get-pub-sub-id=*prod-web*
+  --get-public-ip=*prod-web2
   --get-image-id=ubuntu --region=us-west-2
   --get-sg-id=*internal
   --get-inst-by-id=i-0a3d3a9663d252ebd
