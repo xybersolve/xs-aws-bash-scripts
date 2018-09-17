@@ -253,6 +253,9 @@ __get_opts() {
       --name*)
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
         ;;
+        
+      --dryrun) DRYRUN=${TRUE} ;;
+
 
       ## Debug Routines
       --get-region-names)
