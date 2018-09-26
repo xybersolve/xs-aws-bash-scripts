@@ -86,8 +86,7 @@ __get_image_id() {
 
   # amzn-ami-hvm-2017.03.0.20170417-x86_64-gp2
   # ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20170414
-  [[ -z ${os} ]] && { echo "OS is required field: --os=<os>"; exit 1; }
-
+  [[ -z ${os} ]] && die "OS is required field: --os=<os>"
   local -A os_name=(
     ['ubuntu']='ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64*'
     ['trusty']='ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64*'
@@ -251,14 +250,16 @@ __terminate_instance() {
 __change_instance_type() {
   local name=${1:?name argument is required}
   local type=${2:?type argment is required}
+
   INSTANCE_ID=$( __get_instance_id_by_name "${name}" )
   PUBLIC_IP=$( __get_public_ip "${name}" )
 
+  [[ -z ${INSTANCE_ID} ]] && 
   echo "INSTANCE_ID: ${INSTANCE_ID}"
   echo "INSTANCE_TYPE: ${INSTANCE_TYPE}"
   echo "PUBLIC_IP: ${PUBLIC_IP}"
 
-  (( DRYRUN )) && return
+  return
 
   echo "Stopping instance..."
   # __stop_instance

@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Wraps Codebuild
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.1.1
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2018 http://xybersolve.io
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose:
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+      --start: Start build
+      --stop: Stop a build
+      --list-projects: List all projects in a region
+      --list-builds: List build in a project
+
+      --project=<project_name>: Set project name
+      --region=<region>: Set region
+
+    Examples:
+      ${PROGNAME} --start
+      ${PROGNAME} --start --project=xybersolveBuild
+      ${PROGNAME} --list-projects
+      ${PROGNAME} --list-projects --region=us-east-1
+      ${PROGNAME} --list-builds
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+
+# actions
+declare -i START=${FALSE}
+declare -i STOP=${FALSE}
+declare -i LIST_PROJECTS=${FALSE}
+declare -i LIST_BUILDS=${FALSE}
+
+# script globals
+declare REGION='us-east-1'
+declare PROJECT='xybersolveBuild'
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+
+__start() {
+  aws codebuild --region ${REGION} start-build --project ${PROJECT}
+}
+
+__stop_build() {
+  aws codebuild --region ${REGION} stop-build -project ${PROJECT}
+}
+
+__list_builds() {
+  aws codebuild --region ${REGION} list-builds-for-project --project ${PROJECT}
+}
+
+__list_projects() {
+  aws codebuild --region ${REGION} list-projects
+}
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --start)           START=${TRUE}    ;;
+      --stop)            STOP=${FALSE}    ;;
+      --list-builds)     LIST_BUILDS=${TRUE}   ;;
+      --list-projects)   LIST_PROJECTS=${TRUE} ;;
+      --project*)
+        [[ ${arg} =~ '=' ]] && PROJECT="${arg#*=}"
+        ;;
+      --region*)
+        [[ ${arg} =~ '=' ]] && REGION="${arg#*=}"
+        ;;
+
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( START )) && __start_build
+  (( STOP )) && __stop_build
+  (( LIST_BUILDS )) && __list_builds
+  (( LIST_PROJECTS )) && __list_projects
+
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main

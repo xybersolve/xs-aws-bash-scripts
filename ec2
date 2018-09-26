@@ -86,6 +86,7 @@ declare -r SYNTAX=$(cat <<EOF
       ${PROGNAME} --get-public-ip=*prod-web2
       ${PROGNAME} --get-image-id=ubuntu --region=us-west-2
       ${PROGNAME} --get-sg-id=*internal
+      ${PROGNAME} --get-inst-all-regions
       ${PROGNAME} --get-inst-by-id=i-0a3d3a9663d252ebd
       ${PROGNAME} --get-inst-id-by-name=*web*
       ${PROGNAME} --show-instances
@@ -253,7 +254,7 @@ __get_opts() {
       --name*)
         [[ ${arg} =~ '=' ]] && INSTANCE_NAME="${arg#*=}"
         ;;
-        
+
       --dryrun) DRYRUN=${TRUE} ;;
 
 
@@ -261,10 +262,10 @@ __get_opts() {
       --get-region-names)
         __get_region_names ;;
 
-      --get-inst-all-region*)
+      --get-inst-all-regions)
         __get_instances_all_regions ;;
 
-      --get-rds-all-region*)
+      --get-rds-all-region)
         __get_rds_all_regions ;;
 
 
