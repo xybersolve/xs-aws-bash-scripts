@@ -11,6 +11,7 @@ __copy() {
   local -ra files=(
     'alm'
     'asg'
+    'cb'
     'clrs.sh'
     'ec2'
     'ec2.sh'
