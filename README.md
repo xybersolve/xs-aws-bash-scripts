@@ -11,10 +11,11 @@ They will be fronted by a script of the same name (minus .sh), which will act
 as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 
 
-## Scripts:
+## AWS Scripts:
 * alm: Alarms
 * asg: Auto-Scaling Groups
-* dist: Distribute scripts to script bin and bastion servers
+* cb: Codebuild
+* ce: Cost Explorer
 * ec2: Elastic Compute Cloud (vpc, subnets, security groups, instances, etc)
 * eip: Elastic IPs
 * img: AMI Images
@@ -22,6 +23,10 @@ as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 * namespaces*: Namespace in monitoring
 * r53: Route53
 * rds: Relation Database Service
+* sns: Simple Notification Service
+
+## Support Scripts
+* dist: Distribute scripts to script bin and bastion servers
 
 #### ec2
 
@@ -68,7 +73,6 @@ Usage: ec2 [options]
 
 ```
 #### img
-> sources ec2.sh
 
 ```sh
 Script: img
@@ -88,6 +92,70 @@ Examples:
 
 
 ```
+#### ce
+
+```sh
+$ ce --help
+
+    Script: ce
+    Purpose: Wraps AWS Cost Explorer
+    Usage: ce [options]
+
+    Options:
+      --help:  help and usage (this screen)
+      --version: show version info
+
+      --last=n: Charges for last 'n' days
+      --daily: Show daily costs (defaults to --daily)
+      --monthly: Show monthly costs (defaults to --daily)
+
+    Examples:
+      ce --last=30
+      ce --last=365 --monthly
+
+
+```
+
+## sns
+```sh
+
+$ sns --help
+
+    Script: sns
+    Purpose: Wraps AWS SNS (Simple Notification Service)
+    Usage: sns [options]
+
+    Options:
+     --help:  help and usage
+     --version: show version info
+
+     Actions:
+       --send="<message>": Send message
+       --create=<topic-name>: Setup topic
+       --subscribe=<topic-name>: Subscribe to topic
+       --unsubscribe=<topic-name>: Unsubscribe to topic
+       --delete=<topic-name>: Delete topic
+       --list-topics: List current topics
+       --list-subscriptions: List current subsriptions
+
+     Flags:
+       --timestamp: Prepend timestamp to message
+
+     Variables:
+       --topic=<topic-name>: Set topic name
+       --subject="<subject content>": Set subject (optional)
+       --email=email@domain: Set email for topic subscription
+
+     Examples:
+       sns --create=My-Topic
+       sns --subscribe=My-Topic --email=name@dmain.com
+       sns --send="My message" --topic=My-Topic
+       sns --send="My message" --topic=My-Topic --subject="My Subject" --timestamp
+       sns --list-topics
+       sns --list-subscriptions
+       sns --delete=My-Topic
+```
+
 
 TODO
 - [ ] Move all image related routines to img (out of ec2)

@@ -9,9 +9,11 @@ __copy() {
   # move project files into script bin
   local file=''
   local -ra files=(
+    'aws-common.sh'
     'alm'
     'asg'
     'cb'
+    'ce'
     'clrs.sh'
     'ec2'
     'ec2.sh'
@@ -20,6 +22,7 @@ __copy() {
     'mon'
     'mtr'
     'namespaces.sh'
+    'sns'
   )
   printf "\n"
   for file in "${files[@]}"; do

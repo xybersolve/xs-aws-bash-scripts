@@ -47,81 +47,200 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
     Script: ${PROGNAME}
-    Purpose:
+    Purpose: Wraps AWS SNS (Simple Notification Service)
     Usage: ${PROGNAME} [options]
 
     Options:
       --help:  help and usage
       --version: show version info
 
+      Actions:
+        --send="<message>": Send message
+        --create=<topic-name>: Setup topic
+        --subscribe=<topic-name>: Subscribe to topic
+        --unsubscribe=<topic-name>: Unsubscribe to topic
+        --delete=<topic-name>: Delete topic
+        --list-topics: List current topics
+        --list-subscriptions: List current subsriptions
+
+      Flags:
+        --timestamp: Prepend timestamp to message
+
+      Variables:
+        --topic=<topic-name>: Set topic name
+        --subject="<subject content>": Set subject (optional)
+        --email=email@domain: Set email for topic subscription
+
+      Examples:
+        ${PROGNAME} --create=My-Topic
+        ${PROGNAME} --subscribe=My-Topic --email=name@dmain.com
+        ${PROGNAME} --send="My message" --topic=My-Topic
+        ${PROGNAME} --send="My message" --topic=My-Topic --subject="My Subject" --timestamp
+        ${PROGNAME} --list-topics
+        ${PROGNAME} --list-subscriptions
+        ${PROGNAME} --delete=My-Topic
+
 EOF
 )
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 
 # actions
 declare -i SEND=${FALSE}
+declare -i CREATE=${FALSE}
+declare -i SUBSCRIBE=${FALSE}
+declare -i UNSUBSCRIBE=${FALSE}
+declare -i DELETE=${FALSE}
+declare -i LIST_TOPICS=${FALSE}
+
+# flags
+declare -i TIMESTAMP=${FALSE}
 
 # script globals
 declare MESSAGE=''
+declare SUBJECT=''
 
-# ---------------------------------------
-# COMMON FUNCTIONS
-# ---------------------------------------
-usage() {
-  echo "${SYNTAX}"
-}
-
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
 
 # ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
-__send() {
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 2; }
+
+__build_topic_arn() {
+  [[ -z "${TOPIC_NAME}" ]]
+  TOPIC_ARN="arn:aws:sns:${REGION}:${ACCOUNT_ID}:${TOPIC_NAME}"
+}
+
+__check_topic() {
+  __build_topic_arn
+  aws sns list-subscriptions --output text \
+    | grep -q "${TOPIC_ARN}" \
+      && return 0 \
+      || return 1
 
 }
+__create_topic() {
+  [[ -z "${TOPIC_NAME}" ]] && die "TOPIC_NAME is not defined" 3
+  aws sns create-topic --name "${TOPIC_NAME}"
+}
+
+
+__subscribe() {
+  __build_topic_arn
+  [[ -z "${ADMIN_EMAIL}" ]] && die "ADMIN_EMAIL is not defined" 5
+
+  aws sns subscribe \
+    --topic-arn "${TOPIC_ARN}" \
+    --protocol email \
+    --notification-endpoint "${ADMIN_EMAIL}"
+}
+
+__unsubscribe() {
+  local url='https://sns.us-west-2.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:aws:sns:us-west-2:734741078887:S3-Glacier-Backup:7b399f3f-8ac4-4fb7-82a3-4447274632e4&Endpoint=xybersolve@gmail.com'
+  local url2="https://sns.${REGION}.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:${TOPIC_ARN}:${SUBSCRIPTION_ID}&Endpoint=${ADMIN_EMAIL}"
+  :
+}
+
+__setup_topic() {
+  # TODO: Check subscription
+  if ! __check_topic; then
+    (( VERBOSE )) && echo Creating topic: does not exist
+    __create_topic
+    __subscribe
+  else
+    echo topic exists
+  fi
+}
+
+__send_message() {
+  local message="${1:-${MESSAGE}}"
+  local datetime=$( date +%Y%m%d-%H:%M:%S )
+
+  __build_topic_arn
+
+  (( USE_TIMESTAMP )) \
+    && message="${message} at ${datetime}"
+
+  if [[ -z ${SUBJECT} ]]; then
+    aws sns publish \
+      --topic-arn "${TOPIC_ARN}" \
+      --message "${message}"
+  else
+    aws sns publish \
+      --topic-arn "${TOPIC_ARN}" \
+      --subject "${TOPIC_SUBJECT}" \
+      --message "${message}"
+  fi
+}
+
+__list_subscriptions() {
+  aws sns list-subscriptions --output text
+}
+
+__list_topics() {
+  aws sns list-topics --output text
+}
+
+__delete_topic() {
+  if __check_topic; then
+    aws sns delete-topic \
+      --topic-arn "${TOPIC_ARN}"
+  else
+    echo "Topic does not exist!"
+  fi
+}
+
 __get_opts() {
   while (( $# > 0 )); do
     local arg="${1}"; shift;
     case ${arg} in
       --help)    show_help                ;;
       --version) show_version             ;;
-      --ips)            GET_IPS=${TRUE}   ;;
+
+      # Actions
       --send*) # --option=argument
         SEND=${TRUE}
         [[ ${arg} =~ '=' ]] && MESSAGE="${arg#*=}"
         ;;
+      --create)
+        CREATE=${TRUE}
+        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        ;;
+      --subscribe)
+        SUBSCRIBE=${TRUE}
+        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        ;;
+      --unsubscribe)
+        UNSUBSCRIBE=${TRUE}
+        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        ;;
+
+      --delete*)
+        DELETE=${TRUE}
+        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        ;;
+      --list-topics)  LIST_TOPICS=${TRUE}               ;;
+      --list-subscriptions) LIST_SUBSCRIPTIONS=${TRUE}  ;;
+
+      # Flags
+        --timestamp)   USE_TIMESTAMP=${TRUE}  ;;
+
+      # Variables
+      --subject*)
+        [[ ${arg} =~ '=' ]] && SUBJECT="${arg#*=}"
+        ;;
       --topic*) # --option=argument
         [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
         ;;
-        
+      --email*) # --option=argument
+        [[ ${arg} =~ '=' ]] && ADMIN_EMAIL="${arg#*=}"
+        ;;
       *) die "Unknown option: ${arg}" ;;
    esac
   done
@@ -129,7 +248,15 @@ __get_opts() {
 }
 
 __dispatch() {
-  (( SEND )) && __send
+  (( SEND )) && __send_message
+  (( CREATE )) && __create_topic
+  (( DELETE )) && __delete_topic
+  (( SUBSCRIBE )) && __subscribe
+  (( UNSUBSCRIBE )) && __unsubscribe
+  (( LIST_TOPICS )) && __list_subscriptions
+  (( LIST_TOPICS )) && __list_topics
+
+
   return 0
 }
 
