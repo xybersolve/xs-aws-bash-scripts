@@ -112,6 +112,7 @@ declare TOPIC_SUBJECT=''
 # ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
+# do not have 'die()' routine - in common file
 source "${COMMON_FILE}" || \
   { echo "Could not load common file: ${COMMON_FILE}"; exit 2; }
 
