@@ -102,8 +102,11 @@ declare -i LIST_TOPICS=${FALSE}
 declare -i TIMESTAMP=${FALSE}
 
 # script globals
-declare MESSAGE=''
-declare SUBJECT=''
+declare TOPIC_NAME=''
+declare TOPIC_ARN=''
+declare TOPIC_MESSAGE=''
+declare TOPIC_SUBJECT=''
+
 
 
 # ---------------------------------------
@@ -159,7 +162,7 @@ __setup_topic() {
 }
 
 __send_message() {
-  local message="${1:-${MESSAGE}}"
+  local message="${1:-${TOPIC_MESSAGE}}"
   local datetime=$( date +%Y%m%d-%H:%M:%S )
 
   __build_topic_arn
@@ -167,7 +170,7 @@ __send_message() {
   (( USE_TIMESTAMP )) \
     && message="${message} at ${datetime}"
 
-  if [[ -z ${SUBJECT} ]]; then
+  if [[ -z "${TOPIC_SUBJECT}" ]]; then
     aws sns publish \
       --topic-arn "${TOPIC_ARN}" \
       --message "${message}"
@@ -206,37 +209,37 @@ __get_opts() {
       # Actions
       --send*) # --option=argument
         SEND=${TRUE}
-        [[ ${arg} =~ '=' ]] && MESSAGE="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_MESSAGE="${arg#*=}"
         ;;
-      --create)
+      --create*)
         CREATE=${TRUE}
-        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
-      --subscribe)
+      --subscribe*)
         SUBSCRIBE=${TRUE}
-        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
-      --unsubscribe)
+      --unsubscribe*)
         UNSUBSCRIBE=${TRUE}
-        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
 
       --delete*)
         DELETE=${TRUE}
-        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
       --list-topics)  LIST_TOPICS=${TRUE}               ;;
       --list-subscriptions) LIST_SUBSCRIPTIONS=${TRUE}  ;;
 
       # Flags
-        --timestamp)   USE_TIMESTAMP=${TRUE}  ;;
+      --timestamp)   USE_TIMESTAMP=${TRUE}  ;;
 
       # Variables
       --subject*)
-        [[ ${arg} =~ '=' ]] && SUBJECT="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_SUBJECT="${arg#*=}"
         ;;
       --topic*) # --option=argument
-        [[ ${arg} =~ '=' ]] && TOPIC="${arg#*=}"
+        [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
       --email*) # --option=argument
         [[ ${arg} =~ '=' ]] && ADMIN_EMAIL="${arg#*=}"
