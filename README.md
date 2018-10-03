@@ -156,10 +156,10 @@ $ sns --help
        sns --delete=My-Topic
 ```
 
-
-TODO
+TODO:
 - [ ] Move all image related routines to img (out of ec2)
 - [ ] Make ec2.sh lib routines independent (e.g., no config or dependencies)
 - [ ] Create sh lib for every script category (img, alm, etc), move actual routines to lib scripts.
+- [ ] Move all common & shared routines to aws-common.sh
 
 ## [License](LICENSE.md)
