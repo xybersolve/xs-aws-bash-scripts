@@ -31,6 +31,9 @@ as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 #### ec2 (Elastic Cloud Computing)
 
 ```sh
+
+ec2 --help
+
 Script: ec2
 Purpose: Wrapper to ec2.sh library rouines
 Usage: ec2 [options]
@@ -75,6 +78,9 @@ Usage: ec2 [options]
 #### img (AMI & Images)
 
 ```sh
+
+$ img --help
+
 Script: img
 Purpose: Manage AWS Images
 Usage: img [options]
