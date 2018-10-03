@@ -53,20 +53,22 @@ declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
     Script: ${PROGNAME}
-    Purpose:
+    Purpose: Wraps AWS CodeBuild
     Usage: ${PROGNAME} [options]
 
     Options:
       --help:  help and usage
       --version: show version info
 
-      --start: Start build
-      --stop: Stop a build
-      --list-projects: List all projects in a region
-      --list-builds: List build in a project
+      Actions:
+        --start: Start build
+        --stop: Stop a build
+        --list-projects: List all projects in a region
+        --list-builds: List build in a project
 
-      --project=<project_name>: Set project name
-      --region=<region>: Set region
+      Variables:
+        --project=<project_name>: Set project name
+        --region=<region>: Set region
 
     Examples:
       ${PROGNAME} --start
@@ -77,8 +79,10 @@ declare -r SYNTAX=$(cat <<EOF
 
 EOF
 )
+
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 
 # actions
 declare -i START=${FALSE}
@@ -91,38 +95,12 @@ declare REGION='us-east-1'
 declare PROJECT='xybersolveBuild'
 
 # ---------------------------------------
-# COMMON FUNCTIONS
-# ---------------------------------------
-usage() {
-  echo "${SYNTAX}"
-}
-
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
-
-# ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
+# do not have 'die()' routine - in common file
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 2; }
+
 
 __start() {
   aws codebuild --region ${REGION} start-build --project ${PROJECT}
