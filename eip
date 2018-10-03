@@ -60,7 +60,7 @@ EOF
 )
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
-
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 # actions
 declare -i GET_IPS=${FALSE}
 
@@ -70,6 +70,10 @@ declare -A IPS=()
 # ---------------------------------------
 # COMMON FUNCTIONS
 # ---------------------------------------
+# do not have 'die()' routine yet - in common file
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
+
 __show_public_ips() {
   # show IPS of EC2 Instances
   #Reservations[*].Instances[*].[InstanceId]

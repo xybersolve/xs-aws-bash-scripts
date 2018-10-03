@@ -83,6 +83,7 @@ EOF
 )
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 declare -r LIB_FILE="${SCRIPT_DIR}/ec2.sh"
 declare -r CONF_FILE="${SCRIPT_DIR}/asg.conf.sh"
 
@@ -97,43 +98,17 @@ declare -i DRYRUN=${FALSE}
 # script globals
 
 # ---------------------------------------
-# COMMON FUNCTIONS
-# ---------------------------------------
-usage() {
-  echo "${SYNTAX}"
-}
-
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
-
-# ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
+# do not have 'die()' routine yet - in common file
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
+
 source "${LIB_FILE}" \
-  || die "Unable to open lib file: ${LIB_FILE}" 1
+  || die "Unable to open lib file: ${LIB_FILE}" 2
 
 source "${CONF_FILE}" \
-  || die "Unable to open conf file: ${CONF_FILE}" 2
+  || die "Unable to open conf file: ${CONF_FILE}" 3
 
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
 # aws autoscaling attach-instances --instance-ids i-a8e09d9c --auto-scaling-group-name my-asg

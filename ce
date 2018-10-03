@@ -85,7 +85,6 @@ declare GRANULARITY='DAILY'
 source "${COMMON_FILE}" || \
   { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
 
-
 __days_back() {
   local days=${1:-${DAYS}};
   if [[ ${OS_NAME} == 'Darwin' ]]; then

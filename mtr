@@ -71,6 +71,7 @@ EOF
 )
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 
 # actions
 declare -i LIST_METRICS=${FALSE}
@@ -85,55 +86,17 @@ declare METRIC_NAME=''
 declare -A METRIC_NAMES=(
   ['null']='whatever'
 )
-declare -x _xsRESET='\e[0m'
-declare -x _xsDEFAULT='\e[39m'
-declare -x _xsRED='\e[31m'
-declare -x _xsGREEN='\e[32m'
-declare -x _xsYELLOW='\e[33m'
-declare -x _xsLIGHTGRAY='\e[37m'
-declare -x _xsDARKGRAY='\e[90m'
-declare -x _xsLIGHTRED='\e[91m'
-declare -x _xsLIGHTGREEN='\e[92m'
-declare -x _xsLIGHTYELLOW='\e[93m'
-declare -x _xsLIGHTBLUE='\e[94m'
-declare -x _xsLIGHTMAGENTA='\e[95m'
-declare -x _xsLIGHTCYAN='\e[96m'
-declare -x _xsWHITE='\e[97m'
-# ---------------------------------------
-# COMMON FUNCTIONS
-# ---------------------------------------
-usage() {
-  echo "${SYNTAX}"
-}
 
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
 
 # ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
+# do not have 'die()' routine yet - in common file
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
+
 source "${SCRIPT_DIR}/namespaces.sh" \
-  || die "Unable to load namespaces.sh" 1
+  || die "Unable to load namespaces.sh" 2
 
 __exists() {
   if [ "$2" != in ]; then
