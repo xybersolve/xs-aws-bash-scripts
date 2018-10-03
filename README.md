@@ -93,7 +93,7 @@ Examples:
 
 ```
 
-### cb (Codebuild)
+#### cb (Codebuild)
 
 ```sh
 
@@ -149,7 +149,7 @@ $ ce --help
 
 ```
 
-## sns (Simple Notification Service)
+#### sns (Simple Notification Service)
 
 ```sh
 
