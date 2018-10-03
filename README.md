@@ -19,7 +19,8 @@ as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 * ec2: Elastic Compute Cloud (vpc, subnets, security groups, instances, etc)
 * eip: Elastic IPs
 * img: AMI Images
-* mon: Monitoring
+* mon: CloudWatch Monitoring
+* mtr: CloudWatch Metrics
 * namespaces*: Namespace in monitoring
 * r53: Route53
 * rds: Relation Database Service
@@ -175,8 +176,8 @@ $ sns --help
        --subscribe=<topic-name>: Subscribe to topic
        --unsubscribe=<topic-name>: Unsubscribe to topic
        --delete=<topic-name>: Delete topic
-       --list-topics: List current topics
-       --list-subscriptions: List current subsriptions
+       --list-top<ics>: List current topics
+       --list-sub<scriptions>: List current subsriptions
 
      Flags:
        --timestamp: Prepend timestamp to message
@@ -191,8 +192,8 @@ $ sns --help
        sns --subscribe=My-Topic --email=name@dmain.com
        sns --send="My message" --topic=My-Topic
        sns --send="My message" --topic=My-Topic --subject="My Subject" --timestamp
-       sns --list-topics
-       sns --list-subscriptions
+       sns --list-top
+       sns --list-sub
        sns --delete=My-Topic
 ```
 
