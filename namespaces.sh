@@ -1,3 +1,4 @@
+# Namespace definitions
 declare -A NAMESPACES=()
 NAMESPACES["AWS/ApiGateway"]="Amazon API Gateway"
 NAMESPACES["AWS/AutoScaling"]="Amazon EC2 AutoScaling"

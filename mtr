@@ -47,8 +47,6 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
 
@@ -274,6 +272,32 @@ __choose_namespace() {
   done
 }
 
+__list_from() {
+  # get list of metrics by namespace
+
+  # list-metrics
+  # [--namespace <value>]
+  # [--metric-name <value>]
+  # [--dimensions <value>]
+  # [--cli-input-json <value>]
+  # [--starting-token <value>]
+  # [--max-items <value>]
+  # [--generate-cli-skeleton <value>]
+  aws cloudwatch list-metrics \
+    --namespace ${NAMESPACE}
+}
+
+__get_statistics() {
+  $ aws cloudwatch get-metric-statistics \
+    --namespace ${NAMESPACE} \
+    --metric-name CPUUtilization \
+    --dimensions Name=InstanceId,Value=i-fe0c9270 \
+    --start-time 2015-12-14T09:53 \
+    --end-time 2015-12-14T10:53 \
+    --period 300 \
+    --statistic Average
+}
+
 __list_by() {
   if [[ -n "${NAMESPACE}" ]]; then
     __list_from "${NAMESPACE}"
@@ -418,7 +442,7 @@ __dispatch() {
   (( LIST_METRICS )) && __list_metrics
   (( LIST_ALL )) && __list_all
   (( LIST_BY )) && __list_by
-  (( LIST_FROM )) && __list_from
+  (( LIST_FROM )) && __list_by
   (( LIST_NAMESPACES )) && __list_namespaces
   return 0
 }
