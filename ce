@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Wrap AWS cli ce (cost explorer)
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.1.1
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2018 http://xybersolve.io
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+    Script: ${PROGNAME}
+    Purpose: Wraps AWS Cost Explorer
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+      --last=n: Charges for last 'n' days
+      --daily: Show daily costs (defaults to --daily)
+      --monthly: Show monthly costs (defaults to --daily)
+
+    Examples:
+      ${PROGNAME} --last=30
+      ${PROGNAME} --last=365 --monthly
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+
+# actions
+declare -i LAST=${FALSE}
+
+# script globals
+declare DAYS=30
+declare OS_NAME=$( uname -s )
+declare GRANULARITY='DAILY'
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+
+__days_back() {
+  local days=${1:-${DAYS}};
+  if [[ ${OS_NAME} == 'Darwin' ]]; then
+    echo $( date -v -${days}d +%Y-%m-%d )
+  else
+    echo $( date --date="-${days} day" +%Y-%m-%d )
+  fi
+}
+
+__last_days() {
+# TODO: sort out filter for more granular reports
+# FILTER=$(cat <<EOT
+# {
+#   "Tags":{
+#     "Key":"Name",
+#     "Values": ["xybersolve-prod-web2"],
+#   }
+# }
+# EOT
+# )
+# --filter Tags=Name,Values=xybersolve-prod-web2 \
+# --filter file://filter.json
+
+  local start=$( __days_back ${DAYS} )
+  local end=$(date +"%Y-%m-%d")
+  local filter='Key'
+  aws ce get-cost-and-usage \
+    --time-period Start=${start},End=${end} \
+    --granularity=${GRANULARITY} \
+    --metrics BlendedCost \
+    --output text
+}
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+      --monthly)    GRANULARITY='MONTHLY' ;;
+      --daily)      GRANULARITY='DAILY'   ;;
+
+      --last*)      LAST=${TRUE}
+        [[ ${arg} =~ '=' ]] && DAYS="${arg#*=}"
+        ;;
+      --days-back)
+        __days_back ${DAYS}
+        exit 0
+        ;;
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( LAST )) && __last_days
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main
