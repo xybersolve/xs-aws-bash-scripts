@@ -28,7 +28,7 @@ as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 ## Support Scripts
 * dist: Distribute scripts to script bin and bastion servers
 
-#### ec2
+#### ec2 (Elastic Cloud Computing)
 
 ```sh
 Script: ec2
@@ -72,7 +72,7 @@ Usage: ec2 [options]
     ec2 --create-image=*prod-web2 --image=Web2
 
 ```
-#### img
+#### img (AMI & Images)
 
 ```sh
 Script: img
@@ -92,7 +92,40 @@ Examples:
 
 
 ```
-#### ce
+
+### cb (Codebuild)
+
+```sh
+
+$ cb --help
+
+  Script: cb
+  Purpose: Wraps AWS CodeBuild
+  Usage: cb [options]
+
+  Options:
+    --help:  help and usage
+    --version: show version info
+
+    Actions:
+      --start: Start build
+      --stop: Stop a build
+      --list-projects: List all projects in a region
+      --list-builds: List build in a project
+
+    Variables:
+      --project=<project_name>: Set project name
+      --region=<region>: Set region
+
+  Examples:
+    cb --start
+    cb --start --project=xybersolveBuild
+    cb --list-projects
+    cb --list-projects --region=us-east-1
+    cb --list-builds
+```
+
+#### ce (Cost Explorer)
 
 ```sh
 $ ce --help
@@ -116,7 +149,8 @@ $ ce --help
 
 ```
 
-## sns
+## sns (Simple Notification Service)
+
 ```sh
 
 $ sns --help
