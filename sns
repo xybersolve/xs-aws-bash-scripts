@@ -99,7 +99,7 @@ declare -i DELETE=${FALSE}
 declare -i LIST_TOPICS=${FALSE}
 
 # flags
-declare -i TIMESTAMP=${FALSE}
+declare -i USE_TIMESTAMP=${FALSE}
 
 # script globals
 declare TOPIC_NAME=''
@@ -126,8 +126,8 @@ __check_topic() {
     | grep -q "${TOPIC_ARN}" \
       && return 0 \
       || return 1
-
 }
+
 __create_topic() {
   [[ -z "${TOPIC_NAME}" ]] && die "TOPIC_NAME is not defined" 3
   aws sns create-topic --name "${TOPIC_NAME}"
@@ -145,6 +145,7 @@ __subscribe() {
 }
 
 __unsubscribe() {
+  # TODO: Unsubscribe, fetch subscription id(s) - build call
   local url='https://sns.us-west-2.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:aws:sns:us-west-2:734741078887:S3-Glacier-Backup:7b399f3f-8ac4-4fb7-82a3-4447274632e4&Endpoint=xybersolve@gmail.com'
   local url2="https://sns.${REGION}.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:${TOPIC_ARN}:${SUBSCRIPTION_ID}&Endpoint=${ADMIN_EMAIL}"
   :
