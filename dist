@@ -18,7 +18,6 @@ __copy() {
     'ec2'
     'ec2.sh'
     'ec2.conf.sh'
-    'eip'
     'img'
     'mon'
     'mtr'

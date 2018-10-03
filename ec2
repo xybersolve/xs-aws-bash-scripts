@@ -60,7 +60,7 @@ declare -r SYNTAX=$(cat <<EOF
       --get-vpc-id[=vpc name]: Get the VPC Id
       --get-sg-id[=security group name]: Get security group id
       --get-pub-sub-id[=vpc name]: Get public subnets, using VPC name
-      --get-public-ip[=instance name]: Get public IP for instance
+      --get-public-ip=<instance name>: Get public IP for instance
       --get-inst-id-by-name=<instance name>: Get instance id by name
       --get-inst-by-id=<id>: get instance by id
       --get-inst-all-regions: Get instances across all regions
