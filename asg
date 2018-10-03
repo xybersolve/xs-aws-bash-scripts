@@ -47,11 +47,8 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Manage AWS Auto-Scaling Groups
     Usage: ${PROGNAME} [options]
@@ -82,7 +79,6 @@ declare -r SYNTAX=$(cat <<EOF
       ${PROGNAME} --delete-asg=web-prod-asg
       ${PROGNAME} --delete-lc=web-prod-lc
       ${PROGNAME} --delete-all
-
 EOF
 )
 # files & directories
@@ -142,7 +138,7 @@ source "${CONF_FILE}" \
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
 # aws autoscaling attach-instances --instance-ids i-a8e09d9c --auto-scaling-group-name my-asg
 # aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names my-asg
-# Create launch configurations: from image, instance and configured 
+# Create launch configurations: from image, instance and configured
 # aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --image-id ami-c6169af6 --instance-type m1.medium
 # aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --key-name my-key-pair --image-id ami-c6169af6 --instance-type m1.small --user-data file://myuserdata.txt
 # aws autoscaling create-launch-configuration --launch-configuration-name my-launch-config --key-name my-key-pair --instance-id i-7e13c876 --security-groups sg-eb2af88e --instance-type m1.small --user-data file://myuserdata.txt --instance-monitoring Enabled=true --no-ebs-optimized --no-associate-public-ip-address --placement-tenancy dedicated --iam-instance-profile my-autoscaling-role

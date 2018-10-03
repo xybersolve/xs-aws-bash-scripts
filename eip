@@ -47,19 +47,15 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
-    Purpose: Manage Elastic IPs 
+    Purpose: Manage Elastic IPs
     Usage: ${PROGNAME} [options]
 
     Options:
       --help:  help and usage
       --version: show version info
-
 EOF
 )
 # files & directories

@@ -49,7 +49,6 @@ declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Wraps AWS SNS (Simple Notification Service)
     Usage: ${PROGNAME} [options]
@@ -82,8 +81,8 @@ declare -r SYNTAX=$(cat <<EOF
         ${PROGNAME} --send="My message" --topic=My-Topic --subject="My Subject" --timestamp
         ${PROGNAME} --list-top
         ${PROGNAME} --list-sub
+        ${PROGNAME} --unsubscribe=My-Topic --email=name@domain.com
         ${PROGNAME} --delete=My-Topic
-
 EOF
 )
 # files & directories
@@ -107,15 +106,14 @@ declare TOPIC_NAME=''
 declare TOPIC_ARN=''
 declare TOPIC_MESSAGE=''
 declare TOPIC_SUBJECT=''
-
-
+declare EMAIL=''
 
 # ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
-# do not have 'die()' routine - in common file
+# do not have 'die()' routine yet - in common file
 source "${COMMON_FILE}" || \
-  { echo "Could not load common file: ${COMMON_FILE}"; exit 2; }
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
 
 __build_topic_arn() {
   [[ -z "${TOPIC_NAME}" ]]
@@ -148,9 +146,41 @@ __subscribe() {
 
 __unsubscribe() {
   # TODO: Unsubscribe, fetch subscription id(s) - build call
-  local url='https://sns.us-west-2.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:aws:sns:us-west-2:734741078887:S3-Glacier-Backup:7b399f3f-8ac4-4fb7-82a3-4447274632e4&Endpoint=xybersolve@gmail.com'
-  local url2="https://sns.${REGION}.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:${TOPIC_ARN}:${SUBSCRIPTION_ID}&Endpoint=${ADMIN_EMAIL}"
-  :
+  #local url='https://sns.us-west-2.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:aws:sns:us-west-2:734741078887:S3-Glacier-Backup:7b399f3f-8ac4-4fb7-82a3-4447274632e4&Endpoint=xybersolve@gmail.com'
+  #local url2="https://sns.${REGION}.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:${TOPIC_ARN}:${SUBSCRIPTION_ID}&Endpoint=${ADMIN_EMAIL}"
+  local sub_arn=''
+  local -a sub_arms=()
+
+  if [[ -n ${ADMIN_EMAIL} ]]; then
+    # if email is supplied, should return one item, if any
+    sub_arn=$( aws sns list-subscriptions --output text \
+      | grep "${TOPIC_NAME}" \
+      | grep "${EMAIL}" \
+      | awk '{print $5}' )
+
+    [[ -z "${sub_arn}" ]] && die "No subscription for for that topic and email" 6
+
+    echo "${sub_arn}"
+    #aws sns unsubscribe --subscription-arn "${sub_arn}"
+
+  else
+    # given a topic and no email, there could be multiple subscriptions
+    sub_arns=( $(aws sns list-subscriptions --output text \
+      | grep "${TOPIC_NAME}" \
+      | awk '{print $5}' ) )
+
+    (( ${#sub_arns[@]} == 0 )) && die "No subscription for for that topic" 7
+
+    for arn in "${sub_arns[@]}"; do
+      echo ${arn}
+      #aws sns unsubscribe --subscription-arn "${sub_arn}"
+    done
+  fi
+
+  # subscription arns
+  #aws sns list-subscriptions --output text | grep My-New-Topic | awk '{print $5}'
+  # email arns
+  #aws sns list-subscriptions --output text | grep My-New-Topic | awk '{print $2}'
 }
 
 __setup_topic() {
@@ -241,11 +271,14 @@ __get_opts() {
       --subject*)
         [[ ${arg} =~ '=' ]] && TOPIC_SUBJECT="${arg#*=}"
         ;;
-      --topic*) # --option=argument
+      --topic*)
         [[ ${arg} =~ '=' ]] && TOPIC_NAME="${arg#*=}"
         ;;
-      --email*) # --option=argument
-        [[ ${arg} =~ '=' ]] && ADMIN_EMAIL="${arg#*=}"
+      --email*)
+        if [[ ${arg} =~ '=' ]]; then
+          ADMIN_EMAIL="${arg#*=}"
+          EMAIL="${ADMIN_EMAIL}"
+        fi
         ;;
       *) die "Unknown option: ${arg}" ;;
    esac

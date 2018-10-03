@@ -49,7 +49,6 @@ declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Manage AWS Metrics
     Usage: ${PROGNAME} [options]
@@ -68,7 +67,6 @@ declare -r SYNTAX=$(cat <<EOF
       --list-by=AWS/EC2
       --list-from=AWS/S3
       --list-all
-
 EOF
 )
 # files & directories

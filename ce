@@ -47,8 +47,6 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
     Script: ${PROGNAME}
@@ -66,11 +64,11 @@ declare -r SYNTAX=$(cat <<EOF
     Examples:
       ${PROGNAME} --last=30
       ${PROGNAME} --last=365 --monthly
-
 EOF
 )
 # files & directories
 declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r COMMON_FILE="${SCRIPT_DIR}/aws-common.sh"
 
 # actions
 declare -i LAST=${FALSE}
@@ -81,38 +79,12 @@ declare OS_NAME=$( uname -s )
 declare GRANULARITY='DAILY'
 
 # ---------------------------------------
-# COMMON FUNCTIONS
-# ---------------------------------------
-usage() {
-  echo "${SYNTAX}"
-}
-
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
-
-# ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
+# do not have 'die()' routine yet - in common file
+source "${COMMON_FILE}" || \
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
+
 
 __days_back() {
   local days=${1:-${DAYS}};

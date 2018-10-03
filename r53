@@ -47,11 +47,8 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Manage Route53
     Usage: ${PROGNAME} [options]
@@ -63,7 +60,6 @@ declare -r SYNTAX=$(cat <<EOF
       --create-del-set: Create delegation set
       --get-del-set: Get delegation set
       --get-hosted-zone: Get hosted zone id
-
 EOF
 )
 # files & directories
@@ -174,7 +170,7 @@ __get_opts() {
       --create-del-set) CREATE_DELEGATION_SET=${TRUE} ;;
       --get-del-set)  GET_DELEGATION_SET=${TRUE}      ;;
       --get-hosted-zone) GET_HOSTED_ZONE=${TRUE}      ;;
-      --data*) 
+      --data*)
         USE_DATA=${TRUE}
         [[ ${arg} =~ '=' ]] && DATA="${arg#*=}"
         ;;

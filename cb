@@ -47,11 +47,8 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Wraps AWS CodeBuild
     Usage: ${PROGNAME} [options]
@@ -76,7 +73,6 @@ declare -r SYNTAX=$(cat <<EOF
       ${PROGNAME} --list-projects
       ${PROGNAME} --list-projects --region=us-east-1
       ${PROGNAME} --list-builds
-
 EOF
 )
 
@@ -99,7 +95,7 @@ declare PROJECT='xybersolveBuild'
 # ---------------------------------------
 # do not have 'die()' routine - in common file
 source "${COMMON_FILE}" || \
-  { echo "Could not load common file: ${COMMON_FILE}"; exit 2; }
+  { echo "Could not load common file: ${COMMON_FILE}"; exit 1; }
 
 
 __start() {

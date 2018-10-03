@@ -47,11 +47,8 @@ declare -ir FALSE=0
 
 declare -r PROGNAME="$(basename ${0})"
 declare -r VERSION=0.0.1
-declare -r SUBJECT=""
-declare -r KEYS=""
 declare -ri MIN_ARG_COUNT=1
 declare -r SYNTAX=$(cat <<EOF
-
     Script: ${PROGNAME}
     Purpose: Manage AWS Alarms
     Usage: ${PROGNAME} [options]
@@ -61,7 +58,6 @@ declare -r SYNTAX=$(cat <<EOF
       --version: show version info
 
       --list:
-
 EOF
 )
 # files & directories
