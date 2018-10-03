@@ -17,7 +17,6 @@ as a utility interface. So far, the closest to this goal is ec2 & ec2.sh.
 * cb: Codebuild
 * ce: Cost Explorer
 * ec2: Elastic Compute Cloud (vpc, subnets, security groups, instances, etc)
-* eip: Elastic IPs
 * img: AMI Images
 * mon: CloudWatch Monitoring
 * mtr: CloudWatch Metrics
