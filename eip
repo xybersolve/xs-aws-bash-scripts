@@ -68,7 +68,7 @@ declare -i GET_IPS=${FALSE}
 declare -A IPS=()
 
 # ---------------------------------------
-# COMMON FUNCTIONS
+# MAIN ROUTINES
 # ---------------------------------------
 # do not have 'die()' routine yet - in common file
 source "${COMMON_FILE}" || \
@@ -86,38 +86,6 @@ __show_public_ips() {
   # from instance
   # curl http://169.254.169.254/latest/meta-data/public-ipv4
 }
-
-
-usage() {
-  echo "${SYNTAX}"
-}
-
-error() {
-  printf "\n%s\n" "Error: ${1}"
-}
-
-die() {
-  error "${1}"
-  usage
-  printf "\n\n"
-  exit "${2:-1}"
-}
-
-show_version() {
-  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
-  exit 0
-}
-
-show_help() {
-  printf "\n\n"
-  usage
-  printf "\n\n"
-  exit 0
-}
-
-# ---------------------------------------
-# MAIN ROUTINES
-# ---------------------------------------
 
 __get_opts() {
   while (( $# > 0 )); do
