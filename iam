@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+# ================================================================
+# -*- mode: bash -*-
+# vi: set ft=sh
+# ****************************************************************
+#
+# DESCRIPTION
+#    Wraps AWS IAM Service
+#
+# SYNTAX & EXAMPLES
+#    See 'SYNTAX' (below)
+#
+# ----------------------------------------------------------------
+# IMPLEMENTATION
+#    version         script 0.1.1
+#    author          Greg Milligan
+#    copyright       Copyright (c) 2018 http://xybersolve.io
+#    license         GNU General Public License
+#
+# ================================================================
+#  DEBUG OPTION
+#    set -n  # Uncomment to check your syntax, without execution.
+#    set -x  # Uncomment to debug this shell script
+#
+# ---------------------------------------------------------------
+#
+# TODO:
+# ****************************************************************
+
+
+# ---------------------------------------
+# CONFIGFURATION
+# ---------------------------------------
+# strict environment
+set -o errexit  # exit on command error status
+set -o nounset  # no unreadonlyd variables
+set -o pipefail # failr on pipe failures
+trap 'echo "Aborting due to errexit on line $LINENO. Exit code: ${?}" >&2' ERR
+
+# ---------------------------------------
+# GLOBAL VARIABLES
+# ---------------------------------------
+# booleans
+declare -ir TRUE=1
+declare -ir FALSE=0
+# script info
+
+declare -r PROGNAME="$(basename ${0})"
+declare -r VERSION=0.0.1
+declare -r SUBJECT=""
+declare -r KEYS=""
+declare -ri MIN_ARG_COUNT=1
+declare -r SYNTAX=$(cat <<EOF
+
+    Script: ${PROGNAME}
+    Purpose:
+    Usage: ${PROGNAME} [options]
+
+    Options:
+      --help:  help and usage
+      --version: show version info
+
+      --show-cred*: Show credentials file
+      --show-cfg| --show-config: Show configuration file
+      --edit-cred*: Edit credentials file
+      --edit-cfg | --show-config: Edit configuration file
+      --rotate: Rotate keys for user (menu choice) or all users
+
+EOF
+)
+# files & directories
+declare -r SCRIPT_DIR="$( dirname ${0} )"
+declare -r IAM_CONFIGURATION_FILE=~/.aws/config
+declare -r IAM_CREDENTIALS_FILE=~/.credentials
+
+# actions
+declare -i EDIT_CONFIG=${FALSE}
+declare -i EDIT_CREDENTIALS=${FALSE}
+declare -i SHOW_CONFIG=${FALSE}
+declare -i SHOW_CREDENTIALS=${FALSE}
+declare -i ROTATE=${FALSE}
+
+# script globals
+declare USER_NAME=''
+declare NEW_ACCESS_KEY=''
+declare NEW_ACCESS_SECRET=''
+
+# ---------------------------------------
+# COMMON FUNCTIONS
+# ---------------------------------------
+usage() {
+  echo "${SYNTAX}"
+}
+
+error() {
+  printf "\n%s\n" "Error: ${1}"
+}
+
+die() {
+  error "${1}"
+  usage
+  printf "\n\n"
+  exit "${2:-1}"
+}
+
+show_version() {
+  printf "\n\n%s  %s\n\n\n" "${PROGNAME}" "${VERSION}"
+  exit 0
+}
+
+show_help() {
+  printf "\n\n"
+  usage
+  printf "\n\n"
+  exit 0
+}
+
+# ---------------------------------------
+# MAIN ROUTINES
+# ---------------------------------------
+
+__get_users() {
+  echo $( aws iam get-users )
+}
+
+__choose_user() {
+  local -a users=($( aws iam list-users --output text | awk '{print $NF}' ))
+  PS3="Select user by number: "
+  select user in "Abort" "${users[@]}"; do
+    [[  ${user} = "Abort" ]] \
+      && exit 0 \
+      || { USER_NAME="${user}"; return 0; }
+  done
+}
+
+__show_cfg() {
+  cat ${IAM_CONFIGURATION_FILE}
+}
+
+__show_creds() {
+  cat ${IAM_CREDENTIALS_FILE}
+}
+
+__edit_cfg() {
+  ${EDITOR} ${IAM_CONFIGURATION_FILE}
+}
+
+__edit_creds() {
+  ${EDITOR} ${IAM_CREDENTIALS_FILE}
+}
+
+__last_used() {
+  :
+  #aws iam get-access-key-last-used --
+}
+
+__create_access_key() {
+  local access_key=''
+  access_key=$( aws iam create-access-key --user-name "${USER_NAME}")
+
+  # save access key and secret for config placement
+  NEW_ACCESS_KEY=$( awk '{print $2}' <<<${access_key} )
+  NEW_ACCESS_SECRET=$( awk '{print $3}' <<<${access_key} )
+
+  # debug
+  echo "access_key: ${access_key}"
+  echo "NEW_ACCESS_KEY: ${NEW_ACCESS_KEY}"
+  echo "NEW_ACCESS_SECRET: ${NEW_ACCESS_SECRET}"
+}
+
+__delete_oldest_key() {
+  local -a access_keys=()
+  local -a dates=()
+  local -a sorted_dates=()
+
+  aws iam list-access-keys --user-name "${USER_NAME}" --output text
+
+  local access_keys=($( aws iam list-access-keys --user-name "${USER_NAME}" \
+    --output text \
+    | awk '{print $2}' ))
+
+  echo "${access_keys[-1]}"
+  local dates=($( aws iam list-access-keys --user-name "${USER_NAME}" \
+     --output text \
+     | awk '{print $3}' ))
+
+   sorted_dates=($(printf '%s\n' "${dates[@]}" | sort))
+   echo "dates: ${dates[@]}"
+   echo "sorted: ${sorted_dates[@]}"
+   echo "oldest: ${sorted_dates[-1]}"
+   #for key in "${access_keys[@]}"; then
+}
+
+__set_local() {
+  aws configure --profile "${USER_NAME}" set aws_access_key_id "${NEW_AWS_ACCESS_KEY_ID}"
+  aws configure --profile "${USER_NAME}" set aws_secret_access_key "${NEW_AWS_SECRET_ACCESS_KEY}"
+}
+
+__rotate() {
+  local access_keys=()
+  [[ -n ${USER_NAME} ]] || __choose_user
+
+  access_keys=($(aws iam list-access-keys --user-name "${USER_NAME}" --output text \
+    | awk '{print $2}' ))
+
+  # process keys
+  (( ${#access_keys[@]} > 1 )) \
+    && __delete_oldest_key \
+    || __create_access_key
+
+  # set new key values into local configs
+
+
+  #aws iam create-access-key
+  # still in use
+  #aws iam get-access-key-last-used
+  # change active status
+  #aws iam update-access-key
+  # delete old key
+  #aws iam delete-access-key
+}
+
+
+
+__get_opts() {
+  while (( $# > 0 )); do
+    local arg="${1}"; shift;
+    case ${arg} in
+      --help)    show_help                ;;
+      --version) show_version             ;;
+
+      --show-cfg|--show-config)   SHOW_CONFIG=${TRUE}   ;;
+      --edit-cfg|--edit-config)   EDIT_CONFIG=${TRUE}   ;;
+      --edit-cred*) EDIT_CREDENTIALS=${TRUE}   ;;
+      --show-cred*) SHOW_CREDENTIALS=${TRUE}   ;;
+      --rotate)                 ROTATE=${TRUE} ;;
+      --user*)
+        [[ ${arg} =~ '=' ]] && USER_NAME="${arg#*=}"
+        ;;
+      # debug routines
+      --users)
+        __show_users; exit 0; ;;
+      --create)
+        __create_access_key; exit 0; ;;
+
+
+      *) die "Unknown option: ${arg}" ;;
+   esac
+  done
+  return 0
+}
+
+__dispatch() {
+  (( SHOW_CONFIG )) && __show_cfg
+  (( SHOW_CREDENTIALS )) && __show_creds
+  (( EDIT_CONFIG )) && __edit_cfg
+  (( EDIT_CREDENTIALS )) && __edit_creds
+  (( ROTATE )) && __rotate
+
+  return 0
+}
+
+main() {
+  (( ${#} < MIN_ARG_COUNT )) && die "Expects at least ${MIN_ARG_COUNT} arguments" 1
+  (( $# > 0 )) && __get_opts "$@"
+
+  __dispatch
+
+  return 0
+}
+(( ${#} > 0 )) && main "${@}" || main
