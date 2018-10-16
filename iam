@@ -118,11 +118,9 @@ show_help() {
 # ---------------------------------------
 # MAIN ROUTINES
 # ---------------------------------------
-
-__get_users() {
-  echo $( aws iam get-users )
-}
-
+#
+#  Key Rotation Routines
+#
 __choose_user() {
   local -a users=($( aws iam list-users --output text | awk '{print $NF}' ))
   PS3="Select user by number: "
@@ -131,22 +129,6 @@ __choose_user() {
       && exit 0 \
       || { USER_NAME="${user}"; return 0; }
   done
-}
-
-__show_cfg() {
-  cat ${IAM_CONFIGURATION_FILE}
-}
-
-__show_creds() {
-  cat ${IAM_CREDENTIALS_FILE}
-}
-
-__edit_cfg() {
-  ${EDITOR} ${IAM_CONFIGURATION_FILE}
-}
-
-__edit_creds() {
-  ${EDITOR} ${IAM_CREDENTIALS_FILE}
 }
 
 __last_used() {
@@ -197,6 +179,9 @@ __set_local() {
 }
 
 __rotate() {
+  #
+  #  WARNING: WORK IN PROGRESS
+  #
   local access_keys=()
   [[ -n ${USER_NAME} ]] || __choose_user
 
@@ -219,9 +204,31 @@ __rotate() {
   # delete old key
   #aws iam delete-access-key
 }
+#
+# Support Routines
+#
+__get_users() {
+  echo $( aws iam get-users )
+}
 
+__show_cfg() {
+  cat ${IAM_CONFIGURATION_FILE}
+}
 
+__show_creds() {
+  cat ${IAM_CREDENTIALS_FILE}
+}
 
+__edit_cfg() {
+  ${EDITOR} ${IAM_CONFIGURATION_FILE}
+}
+
+__edit_creds() {
+  ${EDITOR} ${IAM_CREDENTIALS_FILE}
+}
+#
+#  Argument pump
+#
 __get_opts() {
   while (( $# > 0 )); do
     local arg="${1}"; shift;
